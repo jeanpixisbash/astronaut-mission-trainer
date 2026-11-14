@@ -12,6 +12,7 @@ export type GameState = {
   pa: number;
   maxPa: number;
   protocoloActivo: boolean;
+  ocultarHastaDia: number | null; // Interferencia de Telemetría
   log: string[];
   gameOver: boolean;
   won: boolean;
@@ -28,6 +29,7 @@ export function crearEstadoInicial(): GameState {
     pa: 3,
     maxPa: 3,
     protocoloActivo: false,
+    ocultarHastaDia: null,
     log: ["Día 1 — Colonia online. 4 barras en 50%. Sobrevive 15 días sin tocar 0% ni 100%."],
     gameOver: false,
     won: false,
@@ -97,4 +99,16 @@ export function aplicarEventoGlobal(s: GameState, efecto: Partial<Recursos>, nom
 
 export function previewRecursos(recursos: Recursos, impacto: Partial<Recursos>): Recursos {
   return aplicarImpacto(recursos, impacto);
+}
+
+export function intercambiar(recursos: Recursos, dar: keyof Recursos, quitar: number, recibir: keyof Recursos, darCantidad: number): { ok: boolean; recursos: Recursos; msg: string } {
+  if (recursos[dar] < quitar) return { ok: false, recursos, msg: `No tienes ${quitar}% ${dar}` };
+  const r = { ...recursos };
+  r[dar] = clamp(r[dar] - quitar);
+  r[recibir] = clamp(r[recibir] + darCantidad);
+  return { ok: true, recursos: r, msg: `Intercambio ${quitar}% ${dar} → +${darCantidad}% ${recibir}` };
+}
+
+export function debeOcultar(state: GameState): boolean {
+  return state.ocultarHastaDia !== null && state.dia <= state.ocultarHastaDia;
 }

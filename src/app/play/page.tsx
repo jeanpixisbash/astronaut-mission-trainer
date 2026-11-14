@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { SUPERVIVENCIA, EVENTOS_GLOBALES, buildDeckEventos, buildDeckSupervivencia, type CartaSupervivencia, type EventoGlobal } from "@/lib/cardsCatalog";
-import { aplicarCarta, aplicarEventoGlobal, clamp, crearEstadoInicial, desgasteBase, previewRecursos, verificarColapso, type GameState, type Recursos } from "@/lib/gameEngine";
+import { ATAQUE, SUPERVIVENCIA, EVENTOS_GLOBALES, buildDeckAtaque, buildDeckEventos, buildDeckSupervivencia, type CartaAtaque, type CartaSupervivencia, type EventoGlobal } from "@/lib/cardsCatalog";
+import { aplicarCarta, aplicarEventoGlobal, clamp, crearEstadoInicial, debeOcultar, desgasteBase, intercambiar, previewRecursos, verificarColapso, type GameState, type Recursos } from "@/lib/gameEngine";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -20,9 +20,9 @@ const META: Record<keyof Recursos, { icon: string; label: string; color: string 
   escudo: { icon: "🛡️", label: "Escudo", color: "bg-violet-400" },
 };
 
-function Barra({ k, valor, preview }: { k: keyof Recursos; valor: number; preview?: number }) {
+function Barra({ k, valor, preview, oculto }: { k: keyof Recursos; valor: number; preview?: number; oculto?: boolean }) {
   const m = META[k];
-  const delta = preview !== undefined ? preview - valor : 0;
+  const delta = preview !== undefined && !oculto ? preview - valor : 0;
   const low = valor <= 20 || valor >= 85;
   return (
     <div className={`rounded-2xl border p-2.5 ${valor <= 0 || valor >= 100 ? "bg-red-500/20 border-red-400" : low ? "bg-amber-500/10 border-amber-400/30" : "bg-black/30 border-white/10"}`}>
@@ -30,16 +30,17 @@ function Barra({ k, valor, preview }: { k: keyof Recursos; valor: number; previe
         <span className="font-black tracking-wide">
           {m.icon} {m.label.toUpperCase()}
         </span>
-        {delta !== 0 && <span className={`font-black ${delta > 0 ? "text-emerald-300" : "text-red-300"}`}>{delta > 0 ? `▲ +${delta}` : `▼ ${delta}`}</span>}
+        {!oculto && delta !== 0 && <span className={`font-black ${delta > 0 ? "text-emerald-300" : "text-red-300"}`}>{delta > 0 ? `▲ +${delta}` : `▼ ${delta}`}</span>}
+        {oculto && <span className="text-[10px] bg-indigo-500 text-white rounded-full px-1.5 py-0.5 font-black">TELEMETRÍA OFF</span>}
       </div>
       <div className="mt-1 h-3 rounded-full bg-white/10 overflow-hidden relative">
-        <div className={`h-full transition-all duration-500 ${valor <= 0 || valor >= 100 ? "bg-red-500" : m.color}`} style={{ width: `${clamp(valor)}%` }} />
-        {preview !== undefined && delta !== 0 && (
+        <div className={`h-full transition-all duration-500 ${valor <= 0 || valor >= 100 ? "bg-red-500" : m.color}`} style={{ width: `${oculto ? 50 : clamp(valor)}%`, opacity: oculto ? 0.35 : 1 }} />
+        {preview !== undefined && delta !== 0 && !oculto && (
           <div className={`absolute top-0 h-full opacity-60 ${delta > 0 ? "bg-emerald-400" : "bg-red-400"}`} style={{ left: `${Math.min(clamp(valor), clamp(preview))}%`, width: `${Math.abs(clamp(preview) - clamp(valor))}%` }} />
         )}
       </div>
       <div className="mt-1 flex items-center justify-between text-xs">
-        <span className="font-black">{clamp(valor)}%</span>
+        <span className="font-black">{oculto ? "??%" : `${clamp(valor)}%`}</span>
         <span className="text-white/40 text-[10px]">0 — 50 — 100 {valor >= 100 ? "🔥" : valor <= 0 ? "💥" : ""}</span>
       </div>
     </div>
@@ -95,21 +96,65 @@ function CartaView({
   );
 }
 
+function CartaRojaView({ c, pa }: { c: CartaAtaque; pa?: number }) {
+  return (
+    <div className="rounded-[18px] border-2 border-red-500 p-3 bg-gradient-to-br from-red-500 to-orange-600 text-white shadow-lg flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-black tracking-widest bg-black/20 rounded-full px-2 py-1">⚠️ MAZO ROJO — CLIMA / ATAQUE</span>
+        {pa !== undefined && <span className="text-xs font-black bg-black text-white rounded-full px-2 py-1">{pa} PA</span>}
+      </div>
+      <div className="font-black leading-tight">{c.nombre}</div>
+      <div className="flex flex-wrap gap-1">
+        {Object.entries(c.efectoRival).length === 0 ? (
+          <span className="rounded-full bg-indigo-600 border border-indigo-400 px-2 py-0.5 text-xs font-bold">👁️ Oculta tus % 1 turno</span>
+        ) : (
+          Object.entries(c.efectoRival).map(([k, v]) => (
+            <span key={k} className={`rounded-full px-2 py-0.5 text-xs font-bold border ${v! > 0 ? "bg-amber-400 text-black border-amber-500" : "bg-black/30 border-white/30"}`}>
+              {v! > 0 ? `+${v}` : `${v}`} {META[k as keyof Recursos].icon} al rival
+            </span>
+          ))
+        )}
+      </div>
+      <div className="text-[11px] bg-black/20 rounded-xl px-2 py-1">Coste lanzador: {Object.entries(c.costoLanzador).map(([k, v]) => `${v}${META[k as keyof Recursos].icon}`).join(" ") || "—"}</div>
+    </div>
+  );
+}
+
 export default function PlayPage() {
   const [state, setState] = useState<GameState>(() => crearEstadoInicial());
   const [deckSup, setDeckSup] = useState<CartaSupervivencia[]>(() => [...SUPERVIVENCIA]);
+  const [deckRojo, setDeckRojo] = useState<CartaAtaque[]>(() => [...ATAQUE, ...ATAQUE].slice(0, 8));
   const [handIdx, setHandIdx] = useState(0);
+  const [rojoIdx, setRojoIdx] = useState(0);
   const [timeline, setTimeline] = useState<EventoGlobal[]>(() => EVENTOS_GLOBALES.slice(0, 5));
   const [hoverImpact, setHoverImpact] = useState<Partial<Recursos> | null>(null);
   const [protocolo, setProtocolo] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
+  const [fase, setFase] = useState<"negociar" | "planificar">("planificar");
+  const [segundos, setSegundos] = useState(20);
+  const [dar, setDar] = useState<keyof Recursos>("energia");
+  const [recibir, setRecibir] = useState<keyof Recursos>("oxigeno");
+  const [ultimoAtaque, setUltimoAtaque] = useState<CartaAtaque | null>(null);
 
   // shuffle only on client — avoids prerender random mismatch
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDeckSup(shuffle(buildDeckSupervivencia()));
+    setDeckRojo(shuffle(buildDeckAtaque()));
     setTimeline(shuffle(buildDeckEventos()).slice(0, 5));
   }, []);
+
+  // timer negociación 20s (Manual pide 60s — 20s pa' demo ágil)
+  useEffect(() => {
+    if (fase !== "negociar" || state.gameOver) return;
+    if (segundos <= 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFase("planificar");
+      return;
+    }
+    const t = setTimeout(() => setSegundos((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [fase, segundos, state.gameOver]);
 
   const mano = useMemo(() => {
     const out: CartaSupervivencia[] = [];
@@ -126,20 +171,37 @@ export default function PlayPage() {
   const preview = useMemo(() => (hoverImpact ? previewRecursos(state.recursos, hoverImpact) : null), [hoverImpact, state.recursos]);
 
   const avanzar = (carta: CartaSupervivencia) => {
-    if (state.gameOver) return;
+    if (state.gameOver || fase !== "planificar") return;
     if (state.pa < carta.pa) return;
 
-    // 1) Desgaste al iniciar turno (desde día 2) — ya aplicado al cerrar turno anterior, pero aplicamos si es día >1 y es primer acción del día
-    // Aplicamos desgaste al avanzar al siguiente día, no aquí. Para flujo PDF, desgaste ocurre al iniciar turno: lo simulamos al pasar día.
     let next = aplicarCarta(state, carta.impacto, carta.pa, carta.nombre, protocolo);
-    // Protocolo consume 1 PA guardado: si protocolo activo, ya gastaste carta.pa, pero guardas 1 PA => en realidad paRestante = pa - paCoste, y si protocolo true debiste dejar 1 sin gastar. Simplificamos: protocolo solo reduce daño de evento.
-    // Aplicar ataque simulado de evento si protocolo no activo: daño ya en eventoHoy, lo reducimos a mitad si protocolo.
+
+    // — IA / Clima rojo: 1 carta por turno (PDF: 16 cartas ×2, lanzadas por IA en Solitario)
+    const ataque = deckRojo[rojoIdx % deckRojo.length];
+    setUltimoAtaque(ataque);
+    if (ataque.id === "interferencia") {
+      // No toca recursos, solo oculta telemetría 1 turno
+      next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, `🔴 IA: ${ataque.nombre} — ¡telemetría oculta 1 turno!`] };
+    } else {
+      const efecto: Partial<Recursos> = { ...ataque.efectoRival };
+      if (protocolo) {
+        for (const k of Object.keys(efecto) as (keyof Recursos)[]) efecto[k] = Math.round((efecto[k] ?? 0) / 2);
+      }
+      if (Object.keys(efecto).length) {
+        next = { ...next, recursos: { ...next.recursos } };
+        for (const k of Object.keys(efecto) as (keyof Recursos)[]) {
+          next.recursos[k] = clamp(next.recursos[k] + (efecto[k] ?? 0));
+        }
+        next.log = [...next.log, `🔴 Ataque IA: ${ataque.nombre} ${JSON.stringify(efecto)}${protocolo ? " (½ por Protocolo)" : ""}`];
+      }
+    }
+
+    // — Evento global del día (cada 3)
     if (eventoHoy) {
       let efecto = { ...eventoHoy.efecto };
       if (protocolo) {
         for (const k of Object.keys(efecto) as (keyof Recursos)[]) efecto[k] = Math.round((efecto[k] ?? 0) / 2);
       }
-      // Cápsula de reabastecimiento es elección: aquí damos +20 a la barra más baja
       if (eventoHoy.id === "capsula-reabastecimiento") {
         const entries = Object.entries(next.recursos) as [keyof Recursos, number][];
         const masBaja = entries.sort((a, b) => a[1] - b[1])[0][0];
@@ -148,25 +210,23 @@ export default function PlayPage() {
       if (Object.keys(efecto).length) next = aplicarEventoGlobal(next, efecto, eventoHoy.nombre);
     }
 
-    // Verificar colapso 0/100
     const check = verificarColapso(next);
     if (check.gameOver) {
       setState(check);
       setMensaje(check.causaDerrota ?? (check.won ? "¡Victoria!" : "Colapso"));
+      setRojoIdx((i) => (i + 1) % deckRojo.length);
       return;
     }
 
-    // Pasar al siguiente día
     const siguienteDia = check.dia + 1;
     let siguiente: GameState = { ...check, dia: siguienteDia, pa: 3, protocoloActivo: false };
-    // desgaste base del nuevo día (PDF: -5 energía/oxígeno/comida desde día 2)
     if (siguienteDia > 1 && siguienteDia <= 15) {
       siguiente = desgasteBase(siguiente);
-      // verificar de nuevo tras desgaste
       const check2 = verificarColapso(siguiente);
       if (check2.gameOver) {
         setState(check2);
         setMensaje(check2.causaDerrota ?? "Colapso por desgaste");
+        setRojoIdx((i) => (i + 1) % deckRojo.length);
         return;
       }
       siguiente = check2;
@@ -178,20 +238,42 @@ export default function PlayPage() {
       setMensaje(final.won ? "¡15 días! Equilibrado" : "15 días — desequilibrado");
     } else {
       setState(siguiente);
+      // siguiente fase: negociación (Manual 0.4 — 60s, demo 20s)
+      setFase("negociar");
+      setSegundos(20);
     }
     setHandIdx((i) => (i + 1) % deckSup.length);
+    setRojoIdx((i) => (i + 1) % deckRojo.length);
     setProtocolo(false);
     setHoverImpact(null);
   };
 
+  const hacerTrueque = () => {
+    if (fase !== "negociar" || dar === recibir) return;
+    const res = intercambiar(state.recursos, dar, 6, recibir, 3); // 6 → 3 (2:1 con pérdida, trade-off)
+    if (!res.ok) {
+      setMensaje(res.msg);
+      return;
+    }
+    setState((s) => ({ ...s, recursos: res.recursos, log: [...s.log, `🤝 Trueque: ${res.msg}`] }));
+    setMensaje(`🤝 ${res.msg}`);
+  };
+
+  const saltarNegociacion = () => setFase("planificar");
+
   const reiniciar = () => {
     setState(crearEstadoInicial());
     setDeckSup(shuffle(buildDeckSupervivencia()));
+    setDeckRojo(shuffle(buildDeckAtaque()));
     setTimeline(shuffle(buildDeckEventos()).slice(0, 5));
     setHandIdx(0);
+    setRojoIdx(0);
     setHoverImpact(null);
     setProtocolo(false);
     setMensaje(null);
+    setFase("planificar");
+    setSegundos(20);
+    setUltimoAtaque(null);
   };
 
   const puedeGuardarProtocolo = state.pa >= 1 && !state.gameOver;
@@ -232,9 +314,10 @@ export default function PlayPage() {
         </div>
         <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2">
           {(Object.keys(META) as (keyof Recursos)[]).map((k) => (
-            <Barra key={k} k={k} valor={state.recursos[k]} preview={preview ? preview[k] : undefined} />
+            <Barra key={k} k={k} valor={state.recursos[k]} preview={preview ? preview[k] : undefined} oculto={debeOcultar(state)} />
           ))}
         </div>
+        {debeOcultar(state) && <div className="mt-1 text-xs font-bold text-indigo-300">👁️ Interferencia activa — porcentajes ocultos este turno</div>}
       </div>
 
       {/* Timeline eventos cada 3 días */}
@@ -266,28 +349,82 @@ export default function PlayPage() {
         </div>
       </div>
 
+      {/* Negociación 60s (Manual 0.4 Paso 2) */}
+      {fase === "negociar" && !state.gameOver && (
+        <div className="mx-auto w-full max-w-6xl px-4 pt-3">
+          <div className="rounded-2xl border-2 border-amber-400 bg-amber-50 text-zinc-900 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-black text-sm">🤝 NEGOCIACIÓN — {segundos}s</h3>
+              <div className="flex gap-2">
+                <button onClick={saltarNegociacion} className="rounded-full bg-zinc-900 text-white px-3 py-1 text-xs font-black">
+                  Saltar → Planificar
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-600 mt-1">Manual 0.4: 60s para intercambiar fichas (aquí 20s demo). Intercambia 6% de un recurso por 3% de otro. ¡Las promesas no valen, solo el cambio!</p>
+            <div className="mt-2 flex flex-wrap gap-2 items-end">
+              <label className="text-xs font-bold">
+                Doy 6%
+                <select value={dar} onChange={(e) => setDar(e.target.value as keyof Recursos)} className="ml-1 rounded-lg border px-2 py-1">
+                  {(Object.keys(META) as (keyof Recursos)[]).map((k) => (
+                    <option key={k} value={k}>
+                      {META[k].icon} {META[k].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="text-zinc-400">→</span>
+              <label className="text-xs font-bold">
+                Recibo 3%
+                <select value={recibir} onChange={(e) => setRecibir(e.target.value as keyof Recursos)} className="ml-1 rounded-lg border px-2 py-1">
+                  {(Object.keys(META) as (keyof Recursos)[]).map((k) => (
+                    <option key={k} value={k}>
+                      {META[k].icon} {META[k].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button onClick={hacerTrueque} disabled={dar === recibir} className="rounded-full bg-amber-500 text-black px-4 py-1.5 text-xs font-black disabled:opacity-40">
+                Trueque 6→3
+              </button>
+              <span className="text-xs text-zinc-500">Reserva común: intercambios ilimitados pero con pérdida (trade-off).</span>
+            </div>
+            <div className="mt-2 h-1.5 rounded-full bg-zinc-200 overflow-hidden">
+              <div className="h-full bg-amber-500 transition-all" style={{ width: `${(segundos / 20) * 100}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Último ataque rojo revelado */}
+      {ultimoAtaque && (
+        <div className="mx-auto w-full max-w-6xl px-4 pt-3">
+          <CartaRojaView c={ultimoAtaque} />
+        </div>
+      )}
+
       <main className="mx-auto w-full max-w-6xl px-4 py-3 grid lg:grid-cols-[1.15fr_0.85fr] gap-4 flex-1">
         {/* Izquierda: mano */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-black text-sm">MANO — 3 PA por turno · elige 1 carta</h3>
+            <h3 className="font-black text-sm">{fase === "negociar" ? "⏳ NEGOCIANDO — haz trueques" : "MANO — 3 PA por turno · elige 1 carta"}</h3>
             <button
               onClick={() => setProtocolo((v) => !v)}
-              disabled={!puedeGuardarProtocolo}
-              className={`rounded-full px-3 py-1 text-xs font-black border ${protocolo ? "bg-violet-600 text-white border-violet-700" : puedeGuardarProtocolo ? "bg-white/10 border-white/20 hover:bg-white/15" : "bg-white/5 border-white/10 opacity-40"}`}
+              disabled={!puedeGuardarProtocolo || fase === "negociar"}
+              className={`rounded-full px-3 py-1 text-xs font-black border ${protocolo ? "bg-violet-600 text-white border-violet-700" : puedeGuardarProtocolo && fase !== "negociar" ? "bg-white/10 border-white/20 hover:bg-white/15" : "bg-white/5 border-white/10 opacity-40"}`}
             >
               {protocolo ? "🛡️ Protocolo ON (½ daño)" : "Guardar 1 PA → Protocolo (½ daño)"}
             </button>
           </div>
-          <p className="text-xs text-white/60 -mt-2">Hover para preview ▲▼ en las barras. Ninguna carta es 100% positiva — siempre pagas algo.</p>
+          <p className="text-xs text-white/60 -mt-2">{fase === "negociar" ? "Fase Manual 0.4 — intercambia antes de jugar. El tiempo corre..." : "Hover para preview ▲▼ en las barras. Ninguna carta es 100% positiva — siempre pagas algo."}</p>
 
-          <div className="grid sm:grid-cols-3 gap-3">
+          <div className={`grid sm:grid-cols-3 gap-3 ${fase === "negociar" ? "opacity-40 pointer-events-none" : ""}`}>
             {mano.map((c) => (
               <CartaView
                 key={`${c.id}-${handIdx}-${c.nombre}`}
                 c={c}
                 paDisponible={state.pa}
-                disabled={state.gameOver}
+                disabled={state.gameOver || fase === "negociar"}
                 onHover={(on) => setHoverImpact(on ? c.impacto : null)}
                 onPlay={() => avanzar(c)}
               />
