@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Junior Astronaut Mission Trainer — NASA Space Apps 2026
 
-## Getting Started
+> **Run a lunar or Martian outpost. Every watt has a cost.**
+> Interactive game for kids 7–12 to experience the real trade-offs NASA astronauts and planners face.
 
-First, run the development server:
+Challenge: [Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/) · Video: https://www.youtube.com/watch?v=_R0y4i3iY_M
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev   # http://localhost:3000
+pnpm build # production check
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/` — Landing (overview, data sources, CTA)
+- `/play` — Playable 7-sol mission (no login, browser-only)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Core loop
 
-## Learn More
+1. **Allocate power** — split 85W between Life Support (O₂), Shielding, Greenhouse, Science
+2. **Face an event** — DONKI flare, dust storm, O₂ leak, greenhouse alert, comms delay, science window
+3. **Pay the trade-off** — no safe choice; every decision moves 2–3 resources
+4. **Survive 7 sols** — keep health & O₂ > 0, score science
 
-To learn more about Next.js, take a look at the following resources:
+Two locations: **Mars** (12 min comm delay, dust storms) / **Moon** (1.3s, harsher power). Events shuffle for replayability.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Real NASA data (embedded snapshots — labeled honestly)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Dataset | Use in game |
+|---------|-------------|
+| **DONKI** (ccmc.gsfc.nasa.gov/tools/DONKI/) | X8.7 / X2.8 / M7.6 flares drive radiation events |
+| **RadLab OSDR** (visualization.osdr.nasa.gov/radlab) | Real ISS dose 0.4 mSv/day, Moon 1.1, Mars 0.64 |
+| **OSDR Bio** (osdr.nasa.gov/bio/repo) | O₂ 0.84 kg/day, 2500 kcal/day, bio research |
+| **Mars Trek** (trek.nasa.gov/mars) | Mars terrain & comm delay |
+| **CSA Youth** | Food in space toolkit (future greenhouse) |
 
-## Deploy on Vercel
+Live APIs at `api.nasa.gov` — ship curated snapshots for demo stability, per challenge guidance.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 16 (App Router) + TypeScript + Tailwind 4 + Turbopack. No DB/auth — intentional for kids (browser-playable, no download).
+
+## Next steps (if time)
+
+- [ ] Fetch live DONKI feed with `api.nasa.gov` key (fallback to curated)
+- [ ] Mars Rover photo background (api.nasa.gov/mars-photos)
+- [ ] Sound + haptics for 7–12, i18n ES, PWA offline
+- [ ] Classroom worksheet export (what did you trade & why?)
+- [ ] Vercel deploy + `vercel env`
+
+## Attribution
+
+Not affiliated with NASA. Uses public open data per challenge resources. Challenge owns the brief — this is a participant-built trainer.
+
+## License
+
+MIT — do what you want, credit the crew.
