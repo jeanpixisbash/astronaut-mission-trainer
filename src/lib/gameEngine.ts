@@ -15,14 +15,13 @@ export type GameState = {
   log: string[];
   gameOver: boolean;
   won: boolean;
-  pendingEventId: string | null;
 };
 
 export const INITIAL_RESOURCES: Resources = {
-  power: 75,
-  oxygen: 80,
-  food: 70,
-  shielding: 60,
+  power: 70,
+  oxygen: 75,
+  food: 65,
+  shielding: 55,
   health: 100,
   science: 0,
 };
@@ -33,10 +32,9 @@ export function createInitialState(location: "moon" | "mars" = "mars"): GameStat
     maxSol: 7,
     location,
     resources: { ...INITIAL_RESOURCES },
-    log: [`Sol 1 — Outpost online. ${location === "mars" ? "Mars" : "Moon"} environment loaded.`],
+    log: [`Sol 1 — Outpost ready on ${location === "mars" ? "Mars" : "Moon"}!`],
     gameOver: false,
     won: false,
-    pendingEventId: null,
   };
 }
 
@@ -44,65 +42,55 @@ export function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, n));
 }
 
-export function applyDailyDecay(s: GameState): GameState {
+export function canAfford(resources: Resources, cost: Partial<Resources>): boolean {
+  for (const k of Object.keys(cost) as (keyof Resources)[]) {
+    if ((resources[k] ?? 0) < (cost[k] ?? 0)) return false;
+  }
+  return true;
+}
+
+export function applyDailyUpkeep(s: GameState): GameState {
   const r = { ...s.resources };
-  // Base consumption — mirrors real astronaut needs
-  r.power = clamp(r.power - (s.location === "moon" ? 8 : 10));
-  r.oxygen = clamp(r.oxygen - 12);
-  r.food = clamp(r.food - 10);
-  // Radiation wear if shielding low
-  if (r.shielding < 35) r.health = clamp(r.health - 12);
-  else if (r.shielding < 50) r.health = clamp(r.health - 5);
-  // Starvation / O2 crisis
-  if (r.oxygen < 20) r.health = clamp(r.health - 15);
-  if (r.food < 15) r.health = clamp(r.health - 8);
+  // Habitat burns resources every sol — no free lunch
+  r.power = clamp(r.power - (s.location === "moon" ? 7 : 9));
+  r.oxygen = clamp(r.oxygen - 10);
+  r.food = clamp(r.food - 8);
+  // Radiation if shielding low
+  if (r.shielding < 30) r.health = clamp(r.health - 14);
+  else if (r.shielding < 50) r.health = clamp(r.health - 6);
+  // No air/food = health drops fast
+  if (r.oxygen < 18) r.health = clamp(r.health - 16);
+  if (r.food < 12) r.health = clamp(r.health - 10);
+  if (r.power <= 0) r.health = clamp(r.health - 12); // blackout hurts
   return { ...s, resources: r };
 }
 
 export function checkEnd(s: GameState): GameState {
   if (s.resources.health <= 0 || s.resources.oxygen <= 0) {
-    return {
-      ...s,
-      gameOver: true,
-      won: false,
-      log: [...s.log, `💥 Mission failed on Sol ${s.sol}. Crew health critical.`],
-    };
+    return { ...s, gameOver: true, won: false, log: [...s.log, `💥 Mission failed on Sol ${s.sol}. No air or health left!`] };
+  }
+  if (s.resources.power <= 0 && s.resources.oxygen < 25) {
+    return { ...s, gameOver: true, won: false, log: [...s.log, `🔋 Blackout! No power to make oxygen — mission failed.`] };
   }
   if (s.sol >= s.maxSol) {
-    const survived = s.resources.health > 30 && s.resources.oxygen > 10;
+    const survived = s.resources.health > 25 && s.resources.oxygen > 12;
     return {
       ...s,
       gameOver: true,
       won: survived,
-      log: [
-        ...s.log,
-        survived
-          ? `🎉 Mission complete! You kept the crew alive for ${s.maxSol} sols with ${s.resources.science} science points.`
-          : `⚠️ Mission ended — crew exhausted. Try balancing power better next time.`,
-      ],
+      log: [...s.log, survived ? `🎉 You did it! 7 sols survived with ${s.resources.science} science!` : `⚠️ Out of time — crew exhausted. Try better trade-offs!`],
     };
   }
   return s;
 }
 
-export function applyChoice(
-  s: GameState,
-  cost: Partial<Resources>,
-  gain: Partial<Resources>,
-  label: string
-): GameState {
+export function applyChoice(s: GameState, cost: Partial<Resources>, gain: Partial<Resources>, label: string): GameState {
+  if (s.gameOver) return s;
   const r = { ...s.resources };
-  (Object.keys(cost) as (keyof Resources)[]).forEach((k) => {
-    r[k] = clamp(r[k] - (cost[k] ?? 0));
-  });
-  (Object.keys(gain) as (keyof Resources)[]).forEach((k) => {
-    // allow science to exceed 100
+  for (const k of Object.keys(cost) as (keyof Resources)[]) r[k] = clamp(r[k] - (cost[k] ?? 0));
+  for (const k of Object.keys(gain) as (keyof Resources)[]) {
     if (k === "science") r[k] = Math.max(0, r[k] + (gain[k] ?? 0));
     else r[k] = clamp(r[k] + (gain[k] ?? 0));
-  });
-  return {
-    ...s,
-    resources: r,
-    log: [...s.log, `Sol ${s.sol}: ${label}`],
-  };
+  }
+  return { ...s, resources: r, log: [...s.log, `Sol ${s.sol}: ${label}`] };
 }
