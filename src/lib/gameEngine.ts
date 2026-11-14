@@ -1,38 +1,34 @@
-export type Resources = {
-  power: number;
-  oxygen: number;
-  food: number;
-  shielding: number;
-  health: number;
-  science: number;
+export type Recursos = {
+  energia: number;
+  oxigeno: number;
+  comida: number;
+  escudo: number;
 };
 
 export type GameState = {
-  sol: number;
-  maxSol: number;
-  location: "moon" | "mars";
-  resources: Resources;
+  dia: number;
+  maxDias: number;
+  recursos: Recursos;
+  pa: number;
+  maxPa: number;
+  protocoloActivo: boolean;
   log: string[];
   gameOver: boolean;
   won: boolean;
+  causaDerrota?: string;
 };
 
-export const INITIAL_RESOURCES: Resources = {
-  power: 70,
-  oxygen: 75,
-  food: 65,
-  shielding: 55,
-  health: 100,
-  science: 0,
-};
+export const INICIAL: Recursos = { energia: 50, oxigeno: 50, comida: 50, escudo: 50 };
 
-export function createInitialState(location: "moon" | "mars" = "mars"): GameState {
+export function crearEstadoInicial(): GameState {
   return {
-    sol: 1,
-    maxSol: 7,
-    location,
-    resources: { ...INITIAL_RESOURCES },
-    log: [`Sol 1 — Outpost ready on ${location === "mars" ? "Mars" : "Moon"}!`],
+    dia: 1,
+    maxDias: 15,
+    recursos: { ...INICIAL },
+    pa: 3,
+    maxPa: 3,
+    protocoloActivo: false,
+    log: ["Día 1 — Colonia online. 4 barras en 50%. Sobrevive 15 días sin tocar 0% ni 100%."],
     gameOver: false,
     won: false,
   };
@@ -42,55 +38,63 @@ export function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, n));
 }
 
-export function canAfford(resources: Resources, cost: Partial<Resources>): boolean {
-  for (const k of Object.keys(cost) as (keyof Resources)[]) {
-    if ((resources[k] ?? 0) < (cost[k] ?? 0)) return false;
-  }
-  return true;
+export function puedePagar(pa: number, coste: number) {
+  return pa >= coste;
 }
 
-export function applyDailyUpkeep(s: GameState): GameState {
-  const r = { ...s.resources };
-  // Habitat burns resources every sol — no free lunch
-  r.power = clamp(r.power - (s.location === "moon" ? 7 : 9));
-  r.oxygen = clamp(r.oxygen - 10);
-  r.food = clamp(r.food - 8);
-  // Radiation if shielding low
-  if (r.shielding < 30) r.health = clamp(r.health - 14);
-  else if (r.shielding < 50) r.health = clamp(r.health - 6);
-  // No air/food = health drops fast
-  if (r.oxygen < 18) r.health = clamp(r.health - 16);
-  if (r.food < 12) r.health = clamp(r.health - 10);
-  if (r.power <= 0) r.health = clamp(r.health - 12); // blackout hurts
-  return { ...s, resources: r };
+export function aplicarImpacto(recursos: Recursos, impacto: Partial<Recursos>): Recursos {
+  const r = { ...recursos };
+  for (const k of Object.keys(impacto) as (keyof Recursos)[]) {
+    r[k] = clamp(r[k] + (impacto[k] ?? 0));
+  }
+  return r;
 }
 
-export function checkEnd(s: GameState): GameState {
-  if (s.resources.health <= 0 || s.resources.oxygen <= 0) {
-    return { ...s, gameOver: true, won: false, log: [...s.log, `💥 Mission failed on Sol ${s.sol}. No air or health left!`] };
+export function desgasteBase(s: GameState): GameState {
+  if (s.dia === 1) return s; // día 1 sin desgaste (preparación)
+  let r = { ...s.recursos };
+  r = aplicarImpacto(r, { energia: -5, oxigeno: -5, comida: -5 });
+  return { ...s, recursos: r, log: [...s.log, `Día ${s.dia}: desgaste -5% Energía/O₂/Comida`] };
+}
+
+export function verificarColapso(s: GameState): GameState {
+  for (const k of Object.keys(s.recursos) as (keyof Recursos)[]) {
+    const v = s.recursos[k];
+    if (v <= 0) return { ...s, gameOver: true, won: false, causaDerrota: `Colapso por escasez de ${k} (0%)`, log: [...s.log, `💥 ${k} en 0% — colonia colapsa`] };
+    if (v >= 100) {
+      const causa =
+        k === "energia"
+          ? "Sobrecarga eléctrica e incendio"
+          : k === "oxigeno"
+            ? "Hiperoxia — atmósfera inflamable"
+            : k === "comida"
+              ? "Sobreproducción biológica"
+              : "Sobrepresión estructural";
+      return { ...s, gameOver: true, won: false, causaDerrota: `${causa} (${k} 100%)`, log: [...s.log, `💥 ${k} en 100% — ${causa}`] };
+    }
   }
-  if (s.resources.power <= 0 && s.resources.oxygen < 25) {
-    return { ...s, gameOver: true, won: false, log: [...s.log, `🔋 Blackout! No power to make oxygen — mission failed.`] };
-  }
-  if (s.sol >= s.maxSol) {
-    const survived = s.resources.health > 25 && s.resources.oxygen > 12;
-    return {
-      ...s,
-      gameOver: true,
-      won: survived,
-      log: [...s.log, survived ? `🎉 You did it! 7 sols survived with ${s.resources.science} science!` : `⚠️ Out of time — crew exhausted. Try better trade-offs!`],
-    };
+  if (s.dia > s.maxDias) {
+    const equilibrado = Object.values(s.recursos).every((v) => v > 20 && v < 80);
+    return { ...s, gameOver: true, won: equilibrado, log: [...s.log, equilibrado ? "🎉 ¡15 días! Colonia estable y equilibrada." : "⚠️ Sobreviviste pero desequilibrado."] };
   }
   return s;
 }
 
-export function applyChoice(s: GameState, cost: Partial<Resources>, gain: Partial<Resources>, label: string): GameState {
+export function aplicarCarta(s: GameState, impacto: Partial<Recursos>, paCoste: number, nombre: string, protocolo: boolean): GameState {
   if (s.gameOver) return s;
-  const r = { ...s.resources };
-  for (const k of Object.keys(cost) as (keyof Resources)[]) r[k] = clamp(r[k] - (cost[k] ?? 0));
-  for (const k of Object.keys(gain) as (keyof Resources)[]) {
-    if (k === "science") r[k] = Math.max(0, r[k] + (gain[k] ?? 0));
-    else r[k] = clamp(r[k] + (gain[k] ?? 0));
-  }
-  return { ...s, resources: r, log: [...s.log, `Sol ${s.sol}: ${label}`] };
+  if (!puedePagar(s.pa, paCoste)) return s;
+  const r = aplicarImpacto(s.recursos, impacto);
+  const paRestante = s.pa - paCoste + (protocolo ? 0 : 0); // protocolo no consume extra, solo requiere guardar 1 PA
+  const logExtra = protocolo ? " + Protocolo Emergencia (½ daño recibido)" : "";
+  return { ...s, recursos: r, pa: paRestante, log: [...s.log, `Día ${s.dia}: ${nombre} (${paCoste} PA)${logExtra}`] };
+}
+
+export function aplicarEventoGlobal(s: GameState, efecto: Partial<Recursos>, nombre: string): GameState {
+  if (!efecto || Object.keys(efecto).length === 0) return s;
+  const r = aplicarImpacto(s.recursos, efecto);
+  return { ...s, recursos: r, log: [...s.log, `🌌 Evento global: ${nombre} ${JSON.stringify(efecto)}`] };
+}
+
+export function previewRecursos(recursos: Recursos, impacto: Partial<Recursos>): Recursos {
+  return aplicarImpacto(recursos, impacto);
 }
