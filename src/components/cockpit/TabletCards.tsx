@@ -63,6 +63,24 @@ export function ResourceStrip({ recursos, oculto, preview, flash }: { recursos: 
   );
 }
 
+export function Crew({ recursos }: { recursos: Recursos }) {
+  const peor = Math.min(...(Object.values(recursos) as number[]));
+  const mood = peor >= 45 ? { cara: "😊", texto: "feliz", color: "text-emerald-300" } : peor >= 28 ? { cara: "😐", texto: "cansada", color: "text-amber-300" } : { cara: "😵", texto: "en peligro", color: "text-red-300" };
+  const nombres = ["Ada", "Yuri", "Mae"];
+  return (
+    <div className="flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5">
+      <span className="text-[10px] font-black tracking-widest text-white/50">TRIPULACIÓN</span>
+      {nombres.map((n) => (
+        <span key={n} className="flex items-center gap-1" title={`${n}: ${mood.texto}`}>
+          <span className="grid size-7 place-items-center rounded-full border border-white/20 bg-black/40 text-lg">{mood.cara}</span>
+          <span className="hidden text-[11px] font-bold text-white/60 sm:inline">{n}</span>
+        </span>
+      ))}
+      <span className={`text-[11px] font-black ${mood.color}`}>{mood.texto}</span>
+    </div>
+  );
+}
+
 export function Hand({
   mano,
   handIdx,

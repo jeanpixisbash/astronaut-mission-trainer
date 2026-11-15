@@ -21,16 +21,16 @@ export type GameState = {
 
 export const INICIAL: Recursos = { energia: 50, oxigeno: 50, comida: 50, escudo: 50 };
 
-export function crearEstadoInicial(): GameState {
+export function crearEstadoInicial(maxDias = 15): GameState {
   return {
     dia: 1,
-    maxDias: 15,
+    maxDias,
     recursos: { ...INICIAL },
     pa: 3,
     maxPa: 3,
     protocoloActivo: false,
     ocultarHastaDia: null,
-    log: ["Día 1 — Colonia online. 4 barras en 50%. Sobrevive 15 días sin tocar 0% ni 100%."],
+    log: [`Día 1 — Colonia online. 4 barras en 50%. Sobrevive ${maxDias} días sin tocar 0% ni 100%.`],
     gameOver: false,
     won: false,
   };
@@ -77,7 +77,7 @@ export function verificarColapso(s: GameState): GameState {
   }
   if (s.dia > s.maxDias) {
     const equilibrado = Object.values(s.recursos).every((v) => v > 20 && v < 80);
-    return { ...s, gameOver: true, won: equilibrado, log: [...s.log, equilibrado ? "🎉 ¡15 días! Colonia estable y equilibrada." : "⚠️ Sobreviviste pero desequilibrado."] };
+    return { ...s, gameOver: true, won: equilibrado, log: [...s.log, equilibrado ? `🎉 ¡${s.maxDias} días! Colonia estable y equilibrada.` : "⚠️ Sobreviviste pero desequilibrado."] };
   }
   return s;
 }

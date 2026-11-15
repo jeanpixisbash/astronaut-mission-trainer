@@ -5,8 +5,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ATAQUE, SUPERVIVENCIA, EVENTOS_GLOBALES, buildDeckAtaque, buildDeckEventos, buildDeckSupervivencia, type CartaAtaque, type CartaSupervivencia, type EventoGlobal } from "@/lib/cardsCatalog";
 import { aplicarCarta, aplicarEventoGlobal, clamp, crearEstadoInicial, debeOcultar, desgasteBase, intercambiar, previewRecursos, verificarColapso, type GameState, type Recursos } from "@/lib/gameEngine";
 import WindowView from "@/components/cockpit/WindowView";
-import { Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
+import { Crew, Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
 import { sceneFor } from "@/components/cockpit/scene";
+import { MISIONES, buildTimelineFor, type Mision } from "@/lib/missions";
+import { loadStars, marcarTutoVisto, saveStar, tutoVisto } from "@/lib/progress";
+import { isMuted, setMuted, sfx } from "@/lib/sound";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -20,6 +23,17 @@ function shuffle<T>(arr: T[]): T[] {
 type PasoRes = { emoji: string; titulo: string; deltas: Partial<Recursos> };
 
 const FAMILIA_ICON: Record<string, string> = { energia: "⚡", soporte: "💧", biodomo: "🌱", blindaje: "🛡️" };
+
+function equilibrioDe(r: Recursos): number {
+  const vals = Object.values(r) as number[];
+  const d = vals.reduce((a, v) => a + Math.abs(v - 50), 0) / vals.length;
+  return Math.max(0, Math.min(100, Math.round(100 - d * 2)));
+}
+
+function estrellasPara(won: boolean, equi: number): number {
+  if (!won) return 0;
+  return equi >= 70 ? 3 : equi >= 40 ? 2 : 1;
+}
 
 function SideConsole({ side }: { side: "left" | "right" }) {
   return (
@@ -69,6 +83,12 @@ export default function PlayPage() {
   const [sel, setSel] = useState<string | null>(null);
   const seqRef = useRef(0);
   const [needConfirm] = useState(() => typeof window !== "undefined" && window.matchMedia("(hover: none)").matches);
+  // P1+P2: misión, estrellas, sonido, tutorial
+  const [mision, setMision] = useState<Mision | null>(null);
+  const [estrellas, setEstrellas] = useState<Record<string, number>>(() => (typeof window !== "undefined" ? loadStars() : {}));
+  const [estrellasGanadas, setEstrellasGanadas] = useState(0);
+  const [muted, setMutedState] = useState(() => isMuted());
+  const [tutOff, setTutOff] = useState(() => (typeof window !== "undefined" ? tutoVisto() : false));
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -91,8 +111,9 @@ export default function PlayPage() {
   const mano = useMemo(() => {
     const out: CartaSupervivencia[] = [];
     for (let i = 0; i < 3; i++) out.push(deckSup[(handIdx + i) % deckSup.length]);
-    return out;
-  }, [deckSup, handIdx]);
+    // Tutorial: día 1 solo 2 cartas
+    return state.dia === 1 ? out.slice(0, 2) : out;
+  }, [deckSup, handIdx, state.dia]);
 
   const eventoHoy: EventoGlobal | null = useMemo(() => {
     if (state.dia % 3 !== 0) return null;
@@ -153,6 +174,12 @@ export default function PlayPage() {
 
     const finalizeColapso = (failed: GameState) => {
       if (seqRef.current !== seq) return;
+      const equi = equilibrioDe(failed.recursos);
+      const stars = estrellasPara(failed.won, equi);
+      setEstrellasGanadas(stars);
+      if (mision && stars > 0) setEstrellas(saveStar(mision.id, stars));
+      if (failed.won) sfx.win();
+      else sfx.lose();
       setState(failed);
       setMensaje(failed.causaDerrota ?? (failed.won ? "¡Victoria!" : "Colapso"));
       setRojoIdx((i) => (i + 1) % deckRojo.length);
@@ -167,7 +194,7 @@ export default function PlayPage() {
 
     const siguienteDia = check.dia + 1;
     let siguiente: GameState = { ...check, dia: siguienteDia, pa: 3, protocoloActivo: false };
-    if (siguienteDia > 1 && siguienteDia <= 15) {
+    if (siguienteDia > 1 && siguienteDia <= check.maxDias) {
       siguiente = desgasteBase(siguiente);
       pasos.push({ emoji: "😴", titulo: "Desgaste de la noche", deltas: { energia: -5, oxigeno: -5, comida: -5 } });
       vistas.push({ ...siguiente.recursos });
@@ -179,16 +206,20 @@ export default function PlayPage() {
       siguiente = check2;
     }
 
-    if (siguienteDia > 15) {
-      const final = verificarColapso({ ...siguiente, dia: 15 });
+    if (siguienteDia > check.maxDias) {
+      const final = verificarColapso({ ...siguiente, dia: check.maxDias });
       playSequence(pasos, vistas, seq, () => finalizeColapso(final), ataque);
     } else {
       const go = { ...siguiente };
       playSequence(pasos, vistas, seq, () => {
         if (seqRef.current !== seq) return;
         setState(go);
-        setFase("negociar");
-        setSegundos(20);
+        // Tutorial: negociación recién desde el día 3
+        if (go.dia >= 3) {
+          setFase("negociar");
+          setSegundos(20);
+        }
+        if (Math.min(...(Object.values(go.recursos) as number[])) <= 20) sfx.alarm();
         setHandIdx((i) => (i + 1) % deckSup.length);
         setRojoIdx((i) => (i + 1) % deckRojo.length);
         setProtocolo(false);
@@ -205,9 +236,12 @@ export default function PlayPage() {
     setSel(null);
     setHoverImpact(null);
     setResol({ pasos, vistas, i: 0 });
-    pasos.forEach((_, idx) => {
+    pasos.forEach((paso, idx) => {
       setTimeout(() => {
         if (seqRef.current !== seq) return;
+        const net = (Object.values(paso.deltas) as number[]).reduce((a, v) => a + v, 0);
+        if (net > 0) sfx.pop();
+        else if (net < 0) sfx.hit();
         setResol((r) => (r ? { ...r, i: idx + 1 } : r));
       }, 750 * (idx + 1));
     });
@@ -230,12 +264,14 @@ export default function PlayPage() {
 
   const saltarNegociacion = () => setFase("planificar");
 
-  const reiniciar = () => {
+  const iniciar = (m: Mision) => {
     seqRef.current++;
-    setState(crearEstadoInicial());
+    sfx.click();
+    setMision(m);
+    setState(crearEstadoInicial(m.dias));
     setDeckSup(shuffle(buildDeckSupervivencia()));
     setDeckRojo(shuffle(buildDeckAtaque()));
-    setTimeline(shuffle(buildDeckEventos()).slice(0, 5));
+    setTimeline(buildTimelineFor(m, shuffle(buildDeckEventos())));
     setHandIdx(0);
     setRojoIdx(0);
     setHoverImpact(null);
@@ -247,18 +283,64 @@ export default function PlayPage() {
     setResol(null);
     setRecap([]);
     setSel(null);
+    setEstrellasGanadas(0);
   };
 
-  const puedeGuardarProtocolo = state.pa >= 1 && !state.gameOver;
+  const reiniciar = () => {
+    seqRef.current++;
+    const dias = mision?.dias ?? 15;
+    setState(crearEstadoInicial(dias));
+    setDeckSup(shuffle(buildDeckSupervivencia()));
+    setDeckRojo(shuffle(buildDeckAtaque()));
+    setTimeline(mision ? buildTimelineFor(mision, shuffle(buildDeckEventos())) : shuffle(buildDeckEventos()).slice(0, 5));
+    setHandIdx(0);
+    setRojoIdx(0);
+    setHoverImpact(null);
+    setProtocolo(false);
+    setMensaje(null);
+    setFase("planificar");
+    setSegundos(20);
+    setUltimoAtaque(null);
+    setResol(null);
+    setRecap([]);
+    setSel(null);
+    setEstrellasGanadas(0);
+  };
+
+  const cambiarMision = () => {
+    seqRef.current++;
+    setMision(null);
+    setResol(null);
+    setRecap([]);
+    setSel(null);
+    setMensaje(null);
+    setUltimoAtaque(null);
+    setFase("planificar");
+  };
+
+  const toggleMute = () => {
+    const m = !muted;
+    setMuted(m);
+    setMutedState(m);
+    if (!m) sfx.click();
+  };
+
+  const protocoloBloqueado = state.dia < 3;
+  const puedeGuardarProtocolo = state.pa >= 1 && !state.gameOver && !protocoloBloqueado;
   const proximoAtaque = useMemo(() => deckRojo[rojoIdx % deckRojo.length], [deckRojo, rojoIdx]);
+  const vistaActual = resol && resol.i > 0 ? resol.vistas[resol.i - 1] : state.recursos;
+  const equi = equilibrioDe(vistaActual);
+  const equiColor = equi >= 70 ? "text-emerald-300" : equi >= 40 ? "text-amber-300" : "text-red-300";
 
   const jugarCarta = (carta: CartaSupervivencia) => {
     const key = `${carta.id}-${handIdx}`;
     if (needConfirm && sel !== key) {
+      sfx.click();
       setSel(key);
       setHoverImpact(carta.impacto);
       return;
     }
+    sfx.click();
     avanzar(carta);
   };
   const oculto = debeOcultar(state);
@@ -273,13 +355,16 @@ export default function PlayPage() {
             <span className="sm:hidden">Misión</span>
           </Link>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-black">DÍA {Math.min(state.dia, 15)}/15</span>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-black">DÍA {Math.min(state.dia, state.maxDias)}/{state.maxDias}</span>
             <span className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 sm:flex">
               <span className="mr-1 text-xs font-bold">PA</span>
               {[0, 1, 2].map((i) => (
                 <span key={i} className={`size-3 rounded-full border ${i < state.pa ? "bg-amber-400 border-amber-500" : "bg-white/10 border-white/20"}`} />
               ))}
             </span>
+            <button onClick={toggleMute} className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-bold" title={muted ? "Activar sonido" : "Silenciar"}>
+              {muted ? "🔇" : "🔊"}
+            </button>
             <button onClick={reiniciar} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-bold">
               Reiniciar
             </button>
@@ -288,6 +373,48 @@ export default function PlayPage() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl px-3 pb-8 sm:px-4">
+        {/* selector de misión */}
+        <AnimatePresence>
+          {mision === null && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            >
+              <div className="w-full max-w-2xl rounded-[24px] border-4 border-[#343b4a] bg-[#0d1119] p-4 sm:p-6">
+                <h2 className="text-center text-xl font-black">🚀 ELIGE TU MISIÓN</h2>
+                <p className="mt-1 text-center text-xs text-white/60">Gana una para desbloquear la siguiente. Las estrellas premian el equilibrio.</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {MISIONES.map((m, i) => {
+                    const desbloqueada = i === 0 || (estrellas[MISIONES[i - 1].id] ?? 0) > 0;
+                    const ms = estrellas[m.id] ?? 0;
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => desbloqueada && iniciar(m)}
+                        disabled={!desbloqueada}
+                        className={`rounded-2xl border-2 p-3 text-left transition ${desbloqueada ? "border-amber-400 bg-white text-zinc-900 hover:scale-[1.03]" : "border-white/10 bg-white/5 text-white/40"}`}
+                      >
+                        <div className="text-3xl">{desbloqueada ? m.emoji : "🔒"}</div>
+                        <div className="mt-1 font-black">{m.nombre}</div>
+                        <div className="text-xs font-bold opacity-70">{m.dias} días</div>
+                        <div className="mt-1 text-[11px] leading-tight opacity-80">{m.descripcion}</div>
+                        <div className="mt-1 text-[11px] leading-tight opacity-80">{m.objetivo}</div>
+                        <div className="mt-2 text-sm tracking-widest">
+                          {[0, 1, 2].map((s) => (
+                            <span key={s} className={s < ms ? "text-amber-500" : "text-zinc-300"}>★</span>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* cockpit */}
         <div className="mt-3 flex items-stretch justify-center gap-0">
           <SideConsole side="left" />
@@ -300,14 +427,41 @@ export default function PlayPage() {
                 <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${state.gameOver ? (state.won ? "bg-emerald-500 border-emerald-600 text-white" : "bg-red-500 border-red-600 text-white") : "border-white/15 bg-white/5 text-white/80"}`}>
                   {state.gameOver ? (state.won ? "✅ ESTABLE" : `💥 ${state.causaDerrota}`) : resol ? `⏳ ${resol.i >= resol.pasos.length ? "…" : `${resol.pasos[Math.min(resol.i, resol.pasos.length - 1)].emoji} ${resol.pasos[Math.min(resol.i, resol.pasos.length - 1)].titulo}`} (${Math.min(resol.i + 1, resol.pasos.length)}/${resol.pasos.length})` : `● ${fase === "negociar" ? `NEGOCIANDO ${segundos}s` : "ELIGE 1 CARTA"}`}
                 </span>
+                <span className={`rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-black ${equiColor}`} title="Cercanía a 50% en las 4 barras">
+                  ⚖️ {equi}%
+                </span>
                 <button
                   onClick={() => setProtocolo((v) => !v)}
                   disabled={!puedeGuardarProtocolo || fase === "negociar"}
                   className={`rounded-full px-3 py-1 text-[11px] font-black ${protocolo ? "bg-violet-600 text-white" : "bg-white/10 text-white/80"} disabled:opacity-40`}
                 >
-                  {protocolo ? "🛡️ PROTOCOLO ON" : "🛡️ PROTOCOLO (½ daño)"}
+                  {protocoloBloqueado ? "🔒 PROTOCOLO (DÍA 3)" : protocolo ? "🛡️ PROTOCOLO ON" : "🛡️ PROTOCOLO (½ daño)"}
                 </button>
               </div>
+
+              <Crew recursos={vistaActual} />
+
+              {!tutOff && !state.gameOver && !resol && fase === "planificar" && state.dia <= 2 && mision && (
+                <div className="mt-2 rounded-2xl border-2 border-cyan-400 bg-cyan-50 p-3 text-zinc-900">
+                  <div className="text-sm font-black">
+                    {state.dia === 1 ? `👉 ${mision.emoji} ${mision.nombre}: ${mision.objetivo}` : "🔭 Mirá lo que SE ACERCA y elegí tu defensa"}
+                  </div>
+                  <div className="mt-1 text-xs">
+                    {state.dia === 1
+                      ? "PASO 1: tocá una carta. Lo rojo PAGÁS, lo verde GANÁS. Hoy solo hay 2 para empezar fácil."
+                      : "Cada carta roja te pega después de jugar. El protocolo y la negociación llegan el día 3."}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setTutOff(true);
+                      marcarTutoVisto();
+                    }}
+                    className="mt-2 rounded-full bg-zinc-900 px-3 py-1 text-xs font-black text-white"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              )}
 
               <ResourceStrip
                 recursos={resol && resol.i > 0 ? resol.vistas[resol.i - 1] : state.recursos}
@@ -317,7 +471,7 @@ export default function PlayPage() {
               />
               {oculto && <div className="pt-1 text-center text-[11px] font-bold text-indigo-300">👁️ Interferencia — porcentajes ocultos este turno</div>}
 
-              {!state.gameOver && !resol && fase === "planificar" && (
+              {!state.gameOver && !resol && fase === "planificar" && state.dia >= 2 && (
                 <div className="mt-2 rounded-2xl border border-red-400/50 bg-red-500/15 px-3 py-2 text-xs">
                   <span className="font-black text-red-300">🔭 SE ACERCA: {proximoAtaque.nombre}</span>
                   <span className="ml-2 text-white/70">
@@ -392,7 +546,25 @@ export default function PlayPage() {
 
               {state.gameOver && (
                 <div className={`mt-2 rounded-2xl border-2 p-4 text-white ${state.won ? "bg-emerald-500 border-emerald-600" : "bg-red-500 border-red-600"}`}>
-                  <div className="text-lg font-black">{state.won ? "🎉 ¡Sobreviviste 15 días!" : `💥 ${state.causaDerrota}`}</div>
+                  <div className="text-lg font-black">{state.won ? `🎉 ¡Sobreviviste ${state.maxDias} días!` : `💥 ${state.causaDerrota}`}</div>
+                  {mision && <div className="text-xs font-bold opacity-80">{mision.emoji} {mision.nombre}</div>}
+                  <div className="mt-1 flex items-center gap-1" aria-label={`${estrellasGanadas} de 3 estrellas`}>
+                    {[0, 1, 2].map((s) => (
+                      <motion.span
+                        key={s}
+                        initial={{ scale: 0, rotate: -30 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.3 + s * 0.25, type: "spring", stiffness: 300, damping: 12 }}
+                        className={`text-3xl ${s < estrellasGanadas ? "text-amber-300" : "text-white/30"}`}
+                      >
+                        ★
+                      </motion.span>
+                    ))}
+                    <span className="ml-2 text-xs font-bold opacity-80">
+                      {state.won ? (estrellasGanadas === 3 ? "¡Equilibrio perfecto!" : estrellasGanadas === 2 ? "¡Muy equilibrado!" : "¡Vivo! Prueba más equilibrio") : "Sin estrellas — inténtalo de nuevo"}
+                      {mision && (estrellas[mision.id] ?? 0) > estrellasGanadas && ` · Récord: ${"★".repeat(estrellas[mision.id])}`}
+                    </span>
+                  </div>
                   {recap.length > 0 && (
                     <div className="mt-2 rounded-xl bg-black/25 p-2.5">
                       <div className="text-xs font-black tracking-widest opacity-80">📖 ¿QUÉ PASÓ ESTE TURNO?</div>
@@ -411,6 +583,9 @@ export default function PlayPage() {
                   <button onClick={reiniciar} className="mt-2 rounded-full bg-white px-5 py-2 text-sm font-black text-black">
                     Jugar de nuevo
                   </button>
+                  <button onClick={cambiarMision} className="mt-2 ml-2 rounded-full border border-white/50 px-4 py-2 text-sm font-black text-white">
+                    Cambiar misión
+                  </button>
                 </div>
               )}
             </div>
@@ -426,11 +601,12 @@ export default function PlayPage() {
               {[3, 6, 9, 12, 15].map((d, i) => {
                 const ev = timeline[i];
                 const isHoy = state.dia === d;
+                const fuera = d > state.maxDias;
                 return (
-                  <div key={d} className={`min-w-[140px] shrink-0 rounded-xl border px-2.5 py-2 ${isHoy ? "bg-amber-400 text-black border-amber-500" : state.dia > d ? "opacity-50 bg-white/5 border-white/10" : "bg-black/30 border-white/10"}`}>
+                  <div key={d} className={`min-w-[140px] shrink-0 rounded-xl border px-2.5 py-2 ${fuera ? "opacity-30 bg-white/5 border-white/10" : isHoy ? "bg-amber-400 text-black border-amber-500" : state.dia > d ? "opacity-50 bg-white/5 border-white/10" : "bg-black/30 border-white/10"}`}>
                     <div className="text-xs font-black">DÍA {d}</div>
-                    <div className="text-xs font-bold leading-tight">{ev?.nombre ?? "—"}</div>
-                    <div className="text-[11px] leading-tight opacity-70 line-clamp-2">{ev?.datoReal}</div>
+                    <div className="text-xs font-bold leading-tight">{fuera ? "—" : (ev?.nombre ?? "—")}</div>
+                    {!fuera && <div className="text-[11px] leading-tight opacity-70 line-clamp-2">{ev?.datoReal}</div>}
                   </div>
                 );
               })}
