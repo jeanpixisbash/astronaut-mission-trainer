@@ -110,5 +110,6 @@ export function intercambiar(recursos: Recursos, dar: keyof Recursos, quitar: nu
 }
 
 export function debeOcultar(state: GameState): boolean {
-  return state.ocultarHastaDia !== null && state.dia <= state.ocultarHastaDia;
+  // Exactamente 1 turno: solo el día marcado (el siguiente a la interferencia)
+  return state.ocultarHastaDia !== null && state.dia === state.ocultarHastaDia;
 }

@@ -91,6 +91,10 @@ export default function PlayPage() {
   const [tutOff, setTutOff] = useState(() => (typeof window !== "undefined" ? tutoVisto() : false));
   const [protocoloUsado, setProtocoloUsado] = useState(false);
   const [truequeUsado, setTruequeUsado] = useState(false);
+  const [reforzar, setReforzar] = useState(false);
+  const [trueques, setTrueques] = useState(0);
+  const doneRef = useRef<(() => void) | null>(null);
+  const activeSeqRef = useRef(0);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -135,8 +139,21 @@ export default function PlayPage() {
     const vistas: Recursos[] = [];
     const seq = ++seqRef.current;
 
-    let next = aplicarCarta(state, carta.impacto, carta.pa, carta.nombre, protocolo);
-    pasos.push({ emoji: FAMILIA_ICON[carta.familia] ?? "◉", titulo: carta.nombre, detalle: carta.explicacion, deltas: { ...carta.impacto } });
+    // Refuerzo estilo Arkham (comprometer a la prueba): +1 PA → +10 al mayor beneficio
+    let impacto: Partial<Recursos> = { ...carta.impacto };
+    let coste = carta.pa;
+    let etiqueta = carta.nombre;
+    if (reforzar && state.pa >= carta.pa + 1) {
+      const mejor = (Object.entries(impacto) as [keyof Recursos, number][]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0];
+      if (mejor) {
+        impacto = { ...impacto, [mejor[0]]: mejor[1] + 10 };
+        coste += 1;
+        etiqueta += " ⚡";
+      }
+    }
+
+    let next = aplicarCarta(state, impacto, coste, etiqueta, protocolo);
+    pasos.push({ emoji: FAMILIA_ICON[carta.familia] ?? "◉", titulo: etiqueta, detalle: carta.explicacion, deltas: { ...impacto } });
     vistas.push({ ...next.recursos });
 
     const ataque = deckRojo[rojoIdx % deckRojo.length];
@@ -224,6 +241,7 @@ export default function PlayPage() {
         if (go.dia >= 3) {
           setFase("negociar");
           setSegundos(20);
+          setTrueques(0);
         }
         if (Math.min(...(Object.values(go.recursos) as number[])) <= 20) sfx.alarm();
         setHandIdx((i) => (i + 1) % deckSup.length);
@@ -241,24 +259,35 @@ export default function PlayPage() {
     setRecap(pasos);
     setSel(null);
     setHoverImpact(null);
+    setReforzar(false);
+    doneRef.current = done;
+    activeSeqRef.current = seq;
     setResol({ pasos, vistas, i: 0 });
-    pasos.forEach((paso, idx) => {
-      setTimeout(() => {
-        if (seqRef.current !== seq) return;
-        const net = (Object.values(paso.deltas) as number[]).reduce((a, v) => a + v, 0);
-        if (net > 0) sfx.pop();
-        else if (net < 0) sfx.hit();
-        setResol((r) => (r ? { ...r, i: idx + 1 } : r));
-      }, 750 * (idx + 1));
-    });
-    setTimeout(() => {
-      if (seqRef.current !== seq) return;
-      done();
-    }, 750 * pasos.length + 550);
+  };
+
+  // Resolución manual paso a paso (estilo mesa): el jugador avanza cuando termina de leer
+  const avanzarPaso = () => {
+    if (!resol || seqRef.current !== activeSeqRef.current) return;
+    if (resol.i < resol.pasos.length) {
+      sfx.click();
+      const net = (Object.values(resol.pasos[resol.i].deltas) as number[]).reduce((a, v) => a + v, 0);
+      if (net > 0) sfx.pop();
+      else if (net < 0) sfx.hit();
+      setResol({ ...resol, i: resol.i + 1 });
+    } else {
+      const d = doneRef.current;
+      doneRef.current = null;
+      d?.();
+    }
   };
 
   const hacerTrueque = () => {
     if (fase !== "negociar" || dar === recibir) return;
+    // Radio limitada estilo La Tripulación: 2 mensajes por negociación
+    if (trueques >= 2) {
+      setMensaje("📻 La radio solo da para 2 mensajes por negociación");
+      return;
+    }
     const res = intercambiar(state.recursos, dar, 6, recibir, 3);
     if (!res.ok) {
       setMensaje(res.msg);
@@ -267,6 +296,7 @@ export default function PlayPage() {
     setState((s) => ({ ...s, recursos: res.recursos, log: [...s.log, `🤝 Trueque: ${res.msg}`] }));
     setMensaje(`🤝 ${res.msg}`);
     setTruequeUsado(true);
+    setTrueques((t) => t + 1);
   };
 
   const saltarNegociacion = () => setFase("planificar");
@@ -275,7 +305,16 @@ export default function PlayPage() {
     seqRef.current++;
     sfx.click();
     setMision(m);
-    setState(crearEstadoInicial(m.dias));
+    // Veteranía estilo campaña Arkham: ganar la anterior da +5 en tu barra más baja
+    const idx = MISIONES.findIndex((x) => x.id === m.id);
+    let st = crearEstadoInicial(m.dias);
+    if (idx > 0 && (estrellas[MISIONES[idx - 1].id] ?? 0) > 0) {
+      const entries = Object.entries(st.recursos) as [keyof Recursos, number][];
+      const masBaja = entries.sort((a, b) => a[1] - b[1])[0][0];
+      st = { ...st, recursos: { ...st.recursos, [masBaja]: clamp(st.recursos[masBaja] + 5) } };
+      st = { ...st, log: [...st.log, `🎖️ Veteranía: +5 ${masBaja} por ganar ${MISIONES[idx - 1].nombre}.`] };
+    }
+    setState(st);
     setDeckSup(m.guion ? buildDeckFijo(m.guion) : shuffle(buildDeckSupervivencia()));
     setDeckRojo(m.ataques ? buildAtaquesFijos(m.ataques) : shuffle(buildDeckAtaque()));
     setTimeline(buildTimelineFor(m, shuffle(buildDeckEventos())));
@@ -293,14 +332,17 @@ export default function PlayPage() {
     setEstrellasGanadas(0);
     setProtocoloUsado(false);
     setTruequeUsado(false);
+    setReforzar(false);
+    setTrueques(0);
+    doneRef.current = null;
   };
 
   const reiniciar = () => {
     seqRef.current++;
     const dias = mision?.dias ?? 15;
     setState(crearEstadoInicial(dias));
-    setDeckSup(shuffle(buildDeckSupervivencia()));
-    setDeckRojo(shuffle(buildDeckAtaque()));
+    setDeckSup(mision?.guion ? buildDeckFijo(mision.guion) : shuffle(buildDeckSupervivencia()));
+    setDeckRojo(mision?.ataques ? buildAtaquesFijos(mision.ataques) : shuffle(buildDeckAtaque()));
     setTimeline(mision ? buildTimelineFor(mision, shuffle(buildDeckEventos())) : shuffle(buildDeckEventos()).slice(0, 5));
     setHandIdx(0);
     setRojoIdx(0);
@@ -316,10 +358,14 @@ export default function PlayPage() {
     setEstrellasGanadas(0);
     setProtocoloUsado(false);
     setTruequeUsado(false);
+    setReforzar(false);
+    setTrueques(0);
+    doneRef.current = null;
   };
 
   const cambiarMision = () => {
     seqRef.current++;
+    doneRef.current = null;
     setMision(null);
     setResol(null);
     setRecap([]);
@@ -342,6 +388,7 @@ export default function PlayPage() {
   const vistaActual = resol && resol.i > 0 ? resol.vistas[resol.i - 1] : state.recursos;
   const pasoActual = resol && resol.i > 0 ? resol.pasos[resol.i - 1] : null;
   const selCarta = sel ? (mano.find((c) => `${c.id}-${handIdx}` === sel) ?? null) : null;
+  const refuerzoMax = selCarta ? Math.max(0, ...(Object.values(selCarta.impacto) as number[])) : 0;
   const equi = equilibrioDe(vistaActual);
   const equiColor = equi >= 70 ? "text-emerald-300" : equi >= 40 ? "text-amber-300" : "text-red-300";
 
@@ -447,10 +494,14 @@ export default function PlayPage() {
                   onClick={() => setProtocolo((v) => !v)}
                   disabled={!puedeGuardarProtocolo || fase === "negociar"}
                   className={`rounded-full px-3 py-1 text-[11px] font-black ${protocolo ? "bg-violet-600 text-white" : "bg-white/10 text-white/80"} disabled:opacity-40`}
+                  title="Guardas 1 acción sin gastar: todo el daño que recibas este turno se parte a la mitad"
                 >
-                  {protocoloBloqueado ? "🔒 PROTOCOLO (DÍA 3)" : protocolo ? "🛡️ PROTOCOLO ON" : "🛡️ PROTOCOLO (½ daño)"}
+                  {protocoloBloqueado ? "🔒 ¡A CUBIERTO! (DÍA 3)" : protocolo ? "🛡️ ¡A CUBIERTO! ON" : "🛡️ ¡A CUBIERTO! (½ daño)"}
                 </button>
               </div>
+              {mision && !state.gameOver && (
+                <div className="px-1 pb-1 text-[11px] font-bold text-white/55">🎯 {mision.nombre}: {mision.objetivo}</div>
+              )}
 
               <Crew recursos={vistaActual} />
 
@@ -461,12 +512,12 @@ export default function PlayPage() {
                     <span className={state.dia > 1 ? "text-emerald-300" : "text-white/60"}>{state.dia > 1 ? "✅" : "⭕"} Juega una carta</span>
                     <span className={state.dia > 2 ? "text-emerald-300" : "text-white/60"}>{state.dia > 2 ? "✅" : "⭕"} Sobrevive al ataque rojo</span>
                     <span className={protocoloUsado || truequeUsado || state.dia > 3 ? "text-emerald-300" : "text-white/60"}>
-                      {protocoloUsado || truequeUsado || state.dia > 3 ? "✅" : "⭕"} Protégete (protocolo o trueque)
+                      {protocoloUsado || truequeUsado || state.dia > 3 ? "✅" : "⭕"} Protégete (¡a cubierto! o trueque)
                     </span>
                   </div>
                 </div>
               )}
-              {mision?.id === "m0" && state.dia === 1 && fase === "planificar" && !resol && !state.gameOver && (
+              {state.dia === 1 && fase === "planificar" && !resol && !state.gameOver && mision && (
                 <div className="animate-bounce pt-1 text-center text-2xl" aria-hidden>👇</div>
               )}
               <AnimatePresence>
@@ -491,7 +542,7 @@ export default function PlayPage() {
                   <div className="mt-1 text-xs">
                     {state.dia === 1
                       ? "PASO 1: tocá una carta. Lo rojo PAGÁS, lo verde GANÁS. Hoy solo hay 2 para empezar fácil."
-                      : "Cada carta roja te pega después de jugar. El protocolo y la negociación llegan el día 3."}
+                      : "Cada carta roja te pega después de jugar. ¡A cubierto! y la negociación llegan el día 3."}
                   </div>
                   <button
                     onClick={() => {
@@ -511,7 +562,7 @@ export default function PlayPage() {
                 preview={resol ? null : preview}
                 flash={resol && resol.i > 0 ? resol.pasos[resol.i - 1].deltas : null}
               />
-              {oculto && <div className="pt-1 text-center text-[11px] font-bold text-indigo-300">👁️ Interferencia — porcentajes ocultos este turno</div>}
+              {oculto && <div className="pt-1 text-center text-[11px] font-bold text-indigo-300">👁️ Sin telemetría este turno — los % vuelven el día {(state.ocultarHastaDia ?? state.dia) + 1}</div>}
 
               {!state.gameOver && !resol && fase === "planificar" && state.dia >= 2 && (
                 <div className="mt-2 rounded-2xl border border-red-400/50 bg-red-500/15 px-3 py-2 text-xs">
@@ -520,7 +571,7 @@ export default function PlayPage() {
                     {Object.entries(proximoAtaque.efectoRival).length === 0
                       ? "ocultará tus % 1 turno"
                       : Object.entries(proximoAtaque.efectoRival).map(([k, v]) => `${v! > 0 ? `+${v}` : v}${META[k as keyof Recursos].icon}`).join(" ")}
-                    {" "}· juega escudo o protocolo
+                    {" "}· juega escudo o ¡a cubierto!
                   </span>
                 </div>
               )}
@@ -528,13 +579,43 @@ export default function PlayPage() {
               <div className="pt-2">
                 <Hand mano={mano} handIdx={handIdx} pa={state.pa} disabled={state.gameOver || fase === "negociar" || resol !== null} selectedKey={sel} onPlay={jugarCarta} onHover={setHoverImpact} />
               </div>
-              <p className="px-1 pt-2 text-center text-[11px] text-white/50">
-                {needConfirm ? "Tocá una carta para verla · tocá de nuevo para jugarla" : "Toca una carta para jugarla · pasa el mouse para ver ▲▼"} · ninguna carta es 100% buena
+              {resol && (
+                <div className="pt-2">
+                  <div className="flex items-center justify-center gap-1.5 pb-2" aria-hidden>
+                    {resol.pasos.map((_, idx) => (
+                      <span key={idx} className={`size-2.5 rounded-full ${idx < resol.i ? "bg-emerald-400" : idx === resol.i ? "bg-white animate-pulse" : "bg-white/20"}`} />
+                    ))}
+                  </div>
+                  <button
+                    onClick={avanzarPaso}
+                    className="w-full rounded-full bg-white py-2.5 text-sm font-black text-black shadow-lg active:scale-[0.98]"
+                  >
+                    {resol.i < resol.pasos.length ? `SIGUIENTE → (${resol.i + 1}/${resol.pasos.length})` : "¡VER RESULTADO! 🎬"}
+                  </button>
+                  <p className="pt-1 text-center text-[11px] text-white/50">Lee tranquilo, el juego te espera</p>
+                </div>
+              )}
+              <p className="px-1 pt-2 text-center text-[11px] leading-4 text-white/50">
+                {needConfirm ? "👆 Toca para ver · de nuevo para jugar · " : ""}
+                ⚡ ACCIONES ●●●: jugar gasta, vuelven cada día · 🛡️ ¡A CUBIERTO! = mitad de daño
               </p>
               <AnimatePresence>
                 {selCarta && !resol && fase === "planificar" && !state.gameOver && (
-                  <div className="pt-2">
+                  <div className="space-y-2 pt-2">
                     <DetalleCarta c={selCarta} />
+                    {refuerzoMax > 0 && (
+                      <button
+                        onClick={() => {
+                          if (state.pa < selCarta.pa + 1 && !reforzar) return;
+                          sfx.click();
+                          setReforzar((v) => !v);
+                        }}
+                        disabled={state.pa < selCarta.pa + 1 && !reforzar}
+                        className={`w-full rounded-full border-2 py-2 text-xs font-black transition active:scale-[0.98] ${reforzar ? "border-amber-300 bg-amber-400 text-black" : "border-amber-400/60 bg-amber-400/10 text-amber-200"} disabled:opacity-40`}
+                      >
+                        {reforzar ? `⚡ REFORZADA: +1 PA → +10 (toca para quitar)` : `⚡ REFORZAR: +1 PA → +10 al mayor beneficio`}
+                      </button>
+                    )}
                   </div>
                 )}
               </AnimatePresence>
@@ -549,6 +630,7 @@ export default function PlayPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="text-sm font-black">🤝 NEGOCIACIÓN — {segundos}s</h3>
+                      <span className="text-xs font-black text-zinc-500">📻 {trueques}/2 mensajes</span>
                       <button onClick={saltarNegociacion} className="rounded-full bg-zinc-900 px-3 py-1 text-xs font-black text-white">
                         Saltar →
                       </button>
@@ -571,8 +653,8 @@ export default function PlayPage() {
                           ))}
                         </select>
                       </label>
-                      <button onClick={hacerTrueque} disabled={dar === recibir} className="rounded-full bg-amber-500 px-4 py-1.5 text-xs font-black text-black disabled:opacity-40">
-                        Trueque 6→3
+                      <button onClick={hacerTrueque} disabled={dar === recibir || trueques >= 2} className="rounded-full bg-amber-500 px-4 py-1.5 text-xs font-black text-black disabled:opacity-40">
+                        {trueques >= 2 ? "📻 Sin señal" : "Trueque 6→3"}
                       </button>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-200">
