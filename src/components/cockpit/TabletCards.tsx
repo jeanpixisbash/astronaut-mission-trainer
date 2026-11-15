@@ -81,6 +81,33 @@ export function Crew({ recursos }: { recursos: Recursos }) {
   );
 }
 
+export function DetalleCarta({ c }: { c: CartaSupervivencia }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border-2 border-cyan-400 bg-[#f7f1dd] p-3 text-stone-900 shadow-lg"
+    >
+      <div className="text-[11px] font-black tracking-widest text-stone-500">🔍 ¿QUÉ HACE ESTA CARTA?</div>
+      <div className="mt-1 text-sm font-medium leading-5">{c.explicacion}</div>
+      <div className="mt-2 flex flex-wrap gap-1">
+        {Object.entries(c.impacto).map(([k, v]) => (
+          <span key={k} className={`rounded-full px-2 py-0.5 text-xs font-black text-white ${v! > 0 ? "bg-emerald-600" : "bg-red-600"}`}>
+            {v! > 0 ? `+${v}` : v} {META[k as keyof Recursos].icon} {META[k as keyof Recursos].label}
+          </span>
+        ))}
+        <span className="rounded-full bg-stone-900 px-2 py-0.5 text-xs font-black text-white">Cuesta {c.pa} PA</span>
+      </div>
+      <div className="mt-2 rounded-xl bg-stone-900/5 p-2 text-[11px] leading-4 text-stone-700">
+        🛰️ <b>Sello NASA:</b> {c.fundamento}{" "}
+        <a href={c.fuente.url} target="_blank" rel="noreferrer" className="font-bold text-cyan-700 underline">
+          Fuente: {c.fuente.nombre} →
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
 export function Hand({
   mano,
   handIdx,

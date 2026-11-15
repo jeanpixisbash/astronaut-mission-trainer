@@ -22,6 +22,9 @@ export default function Home() {
             <a href="#data" className="hidden sm:block text-white/70 hover:text-white">
               NASA Data
             </a>
+            <Link href="/codex" className="hidden sm:block text-white/70 hover:text-white">
+              📖 Codex
+            </Link>
             <Link
               href="/play"
               className="rounded-full bg-white text-black px-4 py-1.5 font-medium hover:bg-zinc-100 transition"
@@ -213,6 +216,9 @@ export default function Home() {
           </div>
           <Link href="/play" className="rounded-full bg-black text-white px-6 py-3 font-semibold hover:bg-zinc-800 transition">
             Launch Mission →
+          </Link>
+          <Link href="/codex" className="rounded-full border border-black/15 px-6 py-3 font-semibold hover:bg-black/5 transition">
+            📖 Codex NASA
           </Link>
         </div>
         <p className="text-center text-xs text-white/30 mt-4">

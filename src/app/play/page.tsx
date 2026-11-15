@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ATAQUE, SUPERVIVENCIA, EVENTOS_GLOBALES, buildDeckAtaque, buildDeckEventos, buildDeckSupervivencia, type CartaAtaque, type CartaSupervivencia, type EventoGlobal } from "@/lib/cardsCatalog";
 import { aplicarCarta, aplicarEventoGlobal, clamp, crearEstadoInicial, debeOcultar, desgasteBase, intercambiar, previewRecursos, verificarColapso, type GameState, type Recursos } from "@/lib/gameEngine";
 import WindowView from "@/components/cockpit/WindowView";
-import { Crew, Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
+import { Crew, DetalleCarta, Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
 import { sceneFor } from "@/components/cockpit/scene";
 import { MISIONES, buildTimelineFor, type Mision } from "@/lib/missions";
 import { loadStars, marcarTutoVisto, saveStar, tutoVisto } from "@/lib/progress";
@@ -20,7 +20,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-type PasoRes = { emoji: string; titulo: string; deltas: Partial<Recursos> };
+type PasoRes = { emoji: string; titulo: string; detalle: string; deltas: Partial<Recursos> };
 
 const FAMILIA_ICON: Record<string, string> = { energia: "⚡", soporte: "💧", biodomo: "🌱", blindaje: "🛡️" };
 
@@ -133,13 +133,13 @@ export default function PlayPage() {
     const seq = ++seqRef.current;
 
     let next = aplicarCarta(state, carta.impacto, carta.pa, carta.nombre, protocolo);
-    pasos.push({ emoji: FAMILIA_ICON[carta.familia] ?? "◉", titulo: carta.nombre, deltas: { ...carta.impacto } });
+    pasos.push({ emoji: FAMILIA_ICON[carta.familia] ?? "◉", titulo: carta.nombre, detalle: carta.explicacion, deltas: { ...carta.impacto } });
     vistas.push({ ...next.recursos });
 
     const ataque = deckRojo[rojoIdx % deckRojo.length];
     if (ataque.id === "interferencia") {
       next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, `🔴 IA: ${ataque.nombre} — ¡telemetría oculta 1 turno!`] };
-      pasos.push({ emoji: "👁️", titulo: ataque.nombre, deltas: {} });
+      pasos.push({ emoji: "👁️", titulo: ataque.nombre, detalle: ataque.explicacion, deltas: {} });
       vistas.push({ ...next.recursos });
     } else {
       const efecto: Partial<Recursos> = { ...ataque.efectoRival };
@@ -153,7 +153,7 @@ export default function PlayPage() {
         }
         next.log = [...next.log, `🔴 Ataque IA: ${ataque.nombre} ${JSON.stringify(efecto)}${protocolo ? " (½ por Protocolo)" : ""}`];
       }
-      pasos.push({ emoji: "🔴", titulo: ataque.nombre, deltas: efecto });
+      pasos.push({ emoji: "🔴", titulo: ataque.nombre, detalle: ataque.explicacion, deltas: efecto });
       vistas.push({ ...next.recursos });
     }
 
@@ -167,8 +167,11 @@ export default function PlayPage() {
         const masBaja = entries.sort((a, b) => a[1] - b[1])[0][0];
         efecto = { [masBaja]: 20 } as Partial<Recursos>;
       }
+      if (eventoHoy.id === "conjuncion-solar") {
+        next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, `🌌 Evento global: ${eventoHoy.nombre} — ¡radio muerta 1 turno!`] };
+      }
       if (Object.keys(efecto).length) next = aplicarEventoGlobal(next, efecto, eventoHoy.nombre);
-      pasos.push({ emoji: "🌌", titulo: eventoHoy.nombre, deltas: efecto });
+      pasos.push({ emoji: eventoHoy.id === "conjuncion-solar" ? "👁️" : "🌌", titulo: eventoHoy.nombre, detalle: eventoHoy.explicacion, deltas: efecto });
       vistas.push({ ...next.recursos });
     }
 
@@ -196,7 +199,7 @@ export default function PlayPage() {
     let siguiente: GameState = { ...check, dia: siguienteDia, pa: 3, protocoloActivo: false };
     if (siguienteDia > 1 && siguienteDia <= check.maxDias) {
       siguiente = desgasteBase(siguiente);
-      pasos.push({ emoji: "😴", titulo: "Desgaste de la noche", deltas: { energia: -5, oxigeno: -5, comida: -5 } });
+      pasos.push({ emoji: "😴", titulo: "Desgaste de la noche", detalle: "La tripulación respira, bebe y come: la base gasta sola cada noche.", deltas: { energia: -5, oxigeno: -5, comida: -5 } });
       vistas.push({ ...siguiente.recursos });
       const check2 = verificarColapso(siguiente);
       if (check2.gameOver) {
@@ -329,6 +332,8 @@ export default function PlayPage() {
   const puedeGuardarProtocolo = state.pa >= 1 && !state.gameOver && !protocoloBloqueado;
   const proximoAtaque = useMemo(() => deckRojo[rojoIdx % deckRojo.length], [deckRojo, rojoIdx]);
   const vistaActual = resol && resol.i > 0 ? resol.vistas[resol.i - 1] : state.recursos;
+  const pasoActual = resol && resol.i > 0 ? resol.pasos[resol.i - 1] : null;
+  const selCarta = sel ? (mano.find((c) => `${c.id}-${handIdx}` === sel) ?? null) : null;
   const equi = equilibrioDe(vistaActual);
   const equiColor = equi >= 70 ? "text-emerald-300" : equi >= 40 ? "text-amber-300" : "text-red-300";
 
@@ -440,6 +445,19 @@ export default function PlayPage() {
               </div>
 
               <Crew recursos={vistaActual} />
+              <AnimatePresence>
+                {pasoActual && (
+                  <motion.div
+                    key={`${state.dia}-${resol?.i}`}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mt-1.5 rounded-xl border border-white/15 bg-white/[0.05] px-3 py-1.5 text-center text-xs leading-4 text-white/85"
+                  >
+                    <span className="font-black">{pasoActual.emoji} {pasoActual.titulo}:</span> {pasoActual.detalle}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {!tutOff && !state.gameOver && !resol && fase === "planificar" && state.dia <= 2 && mision && (
                 <div className="mt-2 rounded-2xl border-2 border-cyan-400 bg-cyan-50 p-3 text-zinc-900">
@@ -489,6 +507,13 @@ export default function PlayPage() {
               <p className="px-1 pt-2 text-center text-[11px] text-white/50">
                 {needConfirm ? "Tocá una carta para verla · tocá de nuevo para jugarla" : "Toca una carta para jugarla · pasa el mouse para ver ▲▼"} · ninguna carta es 100% buena
               </p>
+              <AnimatePresence>
+                {selCarta && !resol && fase === "planificar" && !state.gameOver && (
+                  <div className="pt-2">
+                    <DetalleCarta c={selCarta} />
+                  </div>
+                )}
+              </AnimatePresence>
 
               <AnimatePresence>
                 {fase === "negociar" && !state.gameOver && (
