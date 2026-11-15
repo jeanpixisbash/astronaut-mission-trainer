@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { CartaSupervivencia } from "@/lib/cardsCatalog";
 import type { Recursos } from "@/lib/gameEngine";
@@ -125,6 +126,12 @@ export function Hand({
   onPlay: (c: CartaSupervivencia) => void;
   onHover: (impacto: Partial<Recursos> | null) => void;
 }) {
+  const [giradas, setGiradas] = useState<{ hand: number; map: Record<string, boolean> }>({ hand: handIdx, map: {} });
+  const mapaGiradas = giradas.hand === handIdx ? giradas.map : {};
+  const girar = (key: string) => {
+    sfxFlip();
+    setGiradas({ hand: handIdx, map: { ...mapaGiradas, [key]: !mapaGiradas[key] } });
+  };
   return (
     <div className="grid grid-cols-3 gap-2 sm:gap-3">
       <AnimatePresence mode="popLayout">
@@ -133,51 +140,125 @@ export function Hand({
           const fam = FAMILIA_STYLE[c.familia] ?? { bg: "#64748b", icon: "◉" };
           const key = `${c.id}-${handIdx}`;
           const selected = selectedKey === key;
+          const girada = !!mapaGiradas[key];
+          const bloqueada = disabled || noPA;
+          const pros = (Object.entries(c.impacto) as [keyof Recursos, number][]).filter(([, v]) => v > 0);
+          const contras = (Object.entries(c.impacto) as [keyof Recursos, number][]).filter(([, v]) => v < 0);
           return (
-            <motion.button
+            <motion.div
               key={key}
               layout
               initial={{ rotateY: 90, y: 24, opacity: 0 }}
               animate={{ rotateY: 0, y: 0, opacity: 1 }}
               exit={{ rotateY: -90, y: -16, opacity: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 24 }}
-              whileHover={disabled || noPA ? undefined : { y: -6, scale: 1.02 }}
-              whileTap={disabled || noPA ? undefined : { scale: 0.97 }}
-              onClick={() => onPlay(c)}
-              onMouseEnter={() => onHover(c.impacto)}
-              onMouseLeave={() => onHover(null)}
-              onFocus={() => onHover(c.impacto)}
-              onBlur={() => onHover(null)}
-              disabled={disabled || noPA}
-              className={`group relative flex min-h-[210px] flex-col rounded-2xl border-2 border-[#d8cfb4] bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] disabled:opacity-45 sm:min-h-[230px] sm:p-3 ${selected ? "ring-4 ring-cyan-400" : ""}`}
+              className="relative [perspective:900px]"
             >
-              <span className="absolute left-2 top-2 grid size-6 place-items-center rounded-full border border-stone-400 bg-white/70 text-xs" aria-hidden>
-                {fam.icon}
-              </span>
-              <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-black text-white ${noPA ? "bg-red-500" : "bg-stone-900"}`}>
-                {c.pa} PA
-              </span>
-              <span className="mx-auto mt-5 grid size-12 place-items-center rounded-full border-2 border-stone-400 bg-white text-2xl" aria-hidden>
-                {c.familia === "energia" ? "⚡" : c.familia === "soporte" ? "💧" : c.familia === "biodomo" ? "🌱" : "🛡️"}
-              </span>
-              <span className="mt-2 text-center text-[13px] font-black leading-tight sm:text-sm">{c.nombre}</span>
-              <span className="mt-1 flex flex-wrap justify-center gap-1">
-                {Object.entries(c.impacto).map(([k, v]) => (
-                  <span key={k} className={`rounded-full px-1.5 py-0.5 text-[11px] font-black ${v! > 0 ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
-                    {v! > 0 ? `+${v}` : v}{META[k as keyof Recursos].icon}
+              <motion.div
+                animate={{ rotateY: girada ? 180 : 0 }}
+                transition={{ type: "spring", stiffness: 220, damping: 22 }}
+                className="relative [transform-style:preserve-3d]"
+              >
+                <div
+                  onClick={() => {
+                    if (!bloqueada) onPlay(c);
+                  }}
+                  onMouseEnter={() => onHover(c.impacto)}
+                  onMouseLeave={() => onHover(null)}
+                  className={`flex min-h-[210px] flex-col rounded-2xl border-2 border-[#d8cfb4] bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] [backface-visibility:hidden] sm:min-h-[230px] sm:p-3 ${selected ? "ring-4 ring-cyan-400" : ""} ${bloqueada ? "opacity-45" : "cursor-pointer"}`}
+                >
+                  <span className="absolute left-2 top-2 grid size-6 place-items-center rounded-full border border-stone-400 bg-white/70 text-xs" aria-hidden>
+                    {fam.icon}
                   </span>
-                ))}
-              </span>
-              <span className="mt-auto line-clamp-2 rounded-lg bg-stone-900/5 px-1.5 py-1 text-center text-[10px] leading-tight text-stone-600">
-                <b>NASA:</b> {c.fundamento}
-              </span>
-              <span className="rounded-full py-1 text-center text-[11px] font-black text-white" style={{ background: fam.bg }}>
-                {noPA ? `FALTAN ${c.pa - pa} PA` : disabled ? "···" : selected ? "▶ TOCÁ DE NUEVO" : `▶ JUGAR`}
-              </span>
-            </motion.button>
+                  <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-black text-white ${noPA ? "bg-red-500" : "bg-zinc-900"}`}>
+                    {c.pa} PA
+                  </span>
+                  <span className="mx-auto mt-5 grid size-12 place-items-center rounded-full border-2 border-stone-400 bg-white text-2xl" aria-hidden>
+                    {c.familia === "energia" ? "⚡" : c.familia === "soporte" ? "💧" : c.familia === "biodomo" ? "🌱" : "🛡️"}
+                  </span>
+                  <span className="mt-2 text-center text-[13px] font-black leading-tight sm:text-sm">{c.nombre}</span>
+                  <span className="mt-1 flex flex-wrap justify-center gap-1">
+                    {Object.entries(c.impacto).map(([k, v]) => (
+                      <span key={k} className={`rounded-full px-1.5 py-0.5 text-[11px] font-black ${v! > 0 ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+                        {v! > 0 ? `+${v}` : v}{META[k as keyof Recursos].icon}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="mt-auto line-clamp-2 rounded-lg bg-stone-900/5 px-1.5 py-1 text-center text-[10px] leading-tight text-stone-600">
+                    <b>NASA:</b> {c.fundamento}
+                  </span>
+                  <span className="rounded-full py-1 text-center text-[11px] font-black text-white" style={{ background: fam.bg }}>
+                    {noPA ? `FALTAN ${c.pa - pa} PA` : disabled ? "···" : selected ? "▶ TOCÁ DE NUEVO" : `▶ JUGAR`}
+                  </span>
+                </div>
+                <div className="absolute inset-0 overflow-y-auto rounded-2xl border-2 border-cyan-500 bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:p-3">
+                  <div className="text-[10px] font-black tracking-widest text-stone-500">❓ ¿QUÉ ES?</div>
+                  <p className="mt-0.5 text-[11px] leading-4">{c.explicacion}</p>
+                  <div className="mt-1.5 text-[10px] font-black tracking-widest text-stone-500">🎯 ¿POR QUÉ JUGARLA?</div>
+                  <ul className="mt-0.5 space-y-0.5 text-[11px] leading-4">
+                    {pros.map(([k, v]) => (
+                      <li key={k}>✅ Sube {META[k].label} {v}. Úsala cuando esté en rojo.</li>
+                    ))}
+                    {contras.map(([k, v]) => (
+                      <li key={k}>⚠️ Ojo: baja {META[k].label} {v}.</li>
+                    ))}
+                    <li>⚡ Cuesta {c.pa} {c.pa === 1 ? "acción" : "acciones"}.</li>
+                  </ul>
+                  <div className="mt-1.5 rounded-lg bg-stone-900/5 p-1.5 text-[10px] leading-4 text-stone-700">
+                    🛰️ <b>Dato NASA:</b> {c.fundamento}{" "}
+                    <a
+                      href={c.fuente.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-bold text-cyan-700 underline"
+                    >
+                      {c.fuente.nombre} →
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  girar(key);
+                }}
+                onMouseEnter={() => onHover(c.impacto)}
+                onMouseLeave={() => onHover(null)}
+                title={girada ? "Volver" : "Girar: ¿qué hace?"}
+                className="absolute -top-2 left-1/2 z-10 grid size-7 -translate-x-1/2 place-items-center rounded-full border-2 border-white bg-zinc-900 text-sm shadow-lg active:scale-90"
+              >
+                {girada ? "↩" : "🔄"}
+              </button>
+            </motion.div>
           );
         })}
       </AnimatePresence>
     </div>
   );
+}
+
+function sfxFlip() {
+  try {
+    const w = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
+    const AC = window.AudioContext ?? w.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(600, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.08);
+    g.gain.setValueAtTime(0.06, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.12);
+    setTimeout(() => {
+      void ctx.close().catch(() => undefined);
+    }, 300);
+  } catch {
+    /* sin audio */
+  }
 }

@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ATAQUE, SUPERVIVENCIA, EVENTOS_GLOBALES, buildDeckAtaque, buildDeckEventos, buildDeckSupervivencia, type CartaAtaque, type CartaSupervivencia, type EventoGlobal } from "@/lib/cardsCatalog";
 import { aplicarCarta, aplicarEventoGlobal, clamp, crearEstadoInicial, debeOcultar, desgasteBase, intercambiar, previewRecursos, verificarColapso, type GameState, type Recursos } from "@/lib/gameEngine";
 import WindowView from "@/components/cockpit/WindowView";
-import { Crew, DetalleCarta, Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
+import { Crew, Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
+import Astronauta, { type Mood } from "@/components/cockpit/Astronauta";
 import { sceneFor } from "@/components/cockpit/scene";
 import { MISIONES, buildAtaquesFijos, buildDeckFijo, buildTimelineFor, type Mision } from "@/lib/missions";
 import {
@@ -446,6 +447,13 @@ export default function PlayPage() {
   const puedeGuardarProtocolo = state.pa >= 1 && !state.gameOver && !protocoloBloqueado;
   const proximoAtaque = useMemo(() => deckRojo[rojoIdx % deckRojo.length], [deckRojo, rojoIdx]);
   const vistaActual = resol && resol.i > 0 ? resol.vistas[resol.i - 1] : state.recursos;
+  const mood: Mood = state.gameOver
+    ? state.won
+      ? "campeon"
+      : "triste"
+    : Math.min(...(Object.values(vistaActual) as number[])) <= 25
+      ? "preocupado"
+      : "feliz";
   const pasoActual = resol && resol.i > 0 ? resol.pasos[resol.i - 1] : null;
   const selCarta = sel ? (mano.find((c) => `${c.id}-${handIdx}` === sel) ?? null) : null;
   const refuerzoMax = selCarta ? Math.max(0, ...(Object.values(selCarta.impacto) as number[])) : 0;
@@ -541,9 +549,10 @@ export default function PlayPage() {
           <div className="min-w-0 flex-1">
             <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
 
-            {/* feed Houston */}
+            {/* feed Houston con astronauta */}
             {mision && (
-              <div className="border-x-[10px] border-[#343b4a] bg-[#10141f] px-3 py-1.5">
+              <div className="flex items-center gap-2 border-x-[10px] border-[#343b4a] bg-[#10141f] px-3 py-1.5">
+                <Astronauta mood={mood} size={44} />
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={houstonMsg}
@@ -551,7 +560,7 @@ export default function PlayPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25 }}
-                    className="text-center text-xs font-bold leading-4 text-cyan-200"
+                    className="flex-1 text-xs font-bold leading-4 text-cyan-200"
                   >
                     {houstonMsg}
                   </motion.div>
@@ -569,7 +578,9 @@ export default function PlayPage() {
                   className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
                 >
                   <div className="w-full max-w-md rounded-[24px] border-4 border-cyan-400 bg-[#0d1119] p-5 text-center">
-                    <div className="text-5xl" aria-hidden>📡</div>
+                    <div className="flex justify-center">
+                      <Astronauta mood="feliz" size={88} />
+                    </div>
                     <h2 className="mt-2 text-lg font-black">{(BRIEFINGS[mision.id] ?? BRIEFING_DEFAULT).titulo}</h2>
                     <div className="mt-3 space-y-2">
                       {(BRIEFINGS[mision.id] ?? BRIEFING_DEFAULT).lineas.map((l, i) => (
@@ -729,25 +740,22 @@ export default function PlayPage() {
               )}
               <p className="px-1 pt-2 text-center text-[11px] leading-4 text-white/50">
                 {needConfirm ? "👆 Toca para ver · de nuevo para jugar · " : ""}
-                ⚡ ACCIONES ●●●: jugar gasta, vuelven cada día · 🛡️ ¡A CUBIERTO! = mitad de daño
+                🔄 Gira las cartas para saber qué hacen · ⚡ ACCIONES ●●●: jugar gasta, vuelven cada día
               </p>
               <AnimatePresence>
-                {selCarta && !resol && fase === "planificar" && !state.gameOver && (
-                  <div className="space-y-2 pt-2">
-                    <DetalleCarta c={selCarta} />
-                    {refuerzoMax > 0 && (
-                      <button
-                        onClick={() => {
-                          if (state.pa < selCarta.pa + 1 && !reforzar) return;
-                          sfx.click();
-                          setReforzar((v) => !v);
-                        }}
-                        disabled={state.pa < selCarta.pa + 1 && !reforzar}
-                        className={`w-full rounded-full border-2 py-2 text-xs font-black transition active:scale-[0.98] ${reforzar ? "border-amber-300 bg-amber-400 text-black" : "border-amber-400/60 bg-amber-400/10 text-amber-200"} disabled:opacity-40`}
-                      >
-                        {reforzar ? `⚡ REFORZADA: +1 PA → +10 (toca para quitar)` : `⚡ REFORZAR: +1 PA → +10 al mayor beneficio`}
-                      </button>
-                    )}
+                {selCarta && !resol && fase === "planificar" && !state.gameOver && refuerzoMax > 0 && (
+                  <div className="pt-2">
+                    <button
+                      onClick={() => {
+                        if (state.pa < selCarta.pa + 1 && !reforzar) return;
+                        sfx.click();
+                        setReforzar((v) => !v);
+                      }}
+                      disabled={state.pa < selCarta.pa + 1 && !reforzar}
+                      className={`w-full rounded-full border-2 py-2 text-xs font-black transition active:scale-[0.98] ${reforzar ? "border-amber-300 bg-amber-400 text-black" : "border-amber-400/60 bg-amber-400/10 text-amber-200"} disabled:opacity-40`}
+                    >
+                      {reforzar ? `⚡ REFORZADA: +1 PA → +10 (toca para quitar)` : `⚡ REFORZAR: +1 PA → +10 al mayor beneficio`}
+                    </button>
                   </div>
                 )}
               </AnimatePresence>
@@ -809,8 +817,13 @@ export default function PlayPage() {
 
               {state.gameOver && (
                 <div className={`mt-2 rounded-2xl border-2 p-4 text-white ${state.won ? "bg-emerald-500 border-emerald-600" : "bg-red-500 border-red-600"}`}>
-                  <div className="text-lg font-black">{state.won ? `🎉 ¡Sobreviviste ${state.maxDias} días!` : `💥 ${state.causaDerrota}`}</div>
-                  {mision && <div className="text-xs font-bold opacity-80">{mision.emoji} {mision.nombre}</div>}
+                  <div className="flex items-center gap-3">
+                    <Astronauta mood={mood} size={64} />
+                    <div>
+                      <div className="text-lg font-black">{state.won ? `🎉 ¡Sobreviviste ${state.maxDias} días!` : `💥 ${state.causaDerrota}`}</div>
+                      {mision && <div className="text-xs font-bold opacity-80">{mision.emoji} {mision.nombre}</div>}
+                    </div>
+                  </div>
                   <div className="mt-1 flex items-center gap-1" aria-label={`${estrellasGanadas} de 3 estrellas`}>
                     {[0, 1, 2].map((s) => (
                       <motion.span
