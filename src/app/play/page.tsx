@@ -866,10 +866,26 @@ export default function PlayPage() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="mt-1.5 rounded-xl border border-white/15 bg-white/[0.05] px-3 py-1.5 text-center text-xs leading-4 text-white/85"
+                    className="mt-1.5 flex items-center gap-3 rounded-2xl border-2 border-white/20 bg-white/[0.07] p-3"
                   >
-                    <span className="font-black">{pasoActual.emoji} {pasoActual.titulo}:</span>{" "}
-                    {pasoActual.houston ? `📡 ${pasoActual.houston}` : pasoActual.detalle}
+                    <Astronauta
+                      mood={
+                        Object.keys(pasoActual.deltas).length === 0 ||
+                        (Object.values(pasoActual.deltas) as number[]).reduce((a, v) => a + v, 0) < 0
+                          ? "preocupado"
+                          : "feliz"
+                      }
+                      size={68}
+                    />
+                    <div className="min-w-0 flex-1 text-left">
+                      <div className="text-base font-black leading-5">
+                        {pasoActual.emoji} {pasoActual.titulo}
+                      </div>
+                      <div className="mt-0.5 text-sm leading-5 text-white/90">
+                        {pasoActual.houston ? `📡 ${pasoActual.houston}` : pasoActual.detalle}
+                      </div>
+                      <div className="mt-1 text-sm font-black leading-5">{textoDeltas(pasoActual.deltas)}</div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
