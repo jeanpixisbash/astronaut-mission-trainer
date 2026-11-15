@@ -10,6 +10,7 @@ import Astronauta, { type Mood } from "@/components/cockpit/Astronauta";
 import { sceneFor } from "@/components/cockpit/scene";
 import { MISIONES, buildAtaquesFijos, buildDeckFijo, buildTimelineFor, type Mision } from "@/lib/missions";
 import {
+  ALERTAS,
   BRIEFINGS,
   BRIEFING_DEFAULT,
   HOUSTON_CALMA,
@@ -20,6 +21,8 @@ import {
   RUTINAS,
   enCalma,
   reaccionDesgaste,
+  type Alerta,
+  type OpcionAlerta,
   type Rutina,
 } from "@/lib/historia";
 import { loadStars, marcarTutoVisto, saveStar, tutoVisto } from "@/lib/progress";
@@ -129,6 +132,41 @@ export default function PlayPage() {
   const [briefing, setBriefing] = useState(false);
   const [houstonMsg, setHoustonMsg] = useState("📡 Houston en línea. ¡Buena suerte!");
   const [rutinaDia, setRutinaDia] = useState<number | null>(null);
+  const [alertaActiva, setAlertaActiva] = useState<Alerta | null>(null);
+  const alertasRef = useRef<Record<number, string>>({});
+
+  /** 2 sorpresas por partida (misiones de 6+ días): días al azar, fuera de eventos globales. */
+  const programarAlertas = (maxDias: number): Record<number, string> => {
+    if (maxDias < 6) return {};
+    const elegibles: number[] = [];
+    for (let d = 2; d <= maxDias - 1; d++) {
+      if (d % 3 !== 0) elegibles.push(d);
+    }
+    const dias = shuffle(elegibles).slice(0, 2);
+    const orden = shuffle([...ALERTAS]);
+    const prog: Record<number, string> = {};
+    dias.forEach((d, i) => {
+      prog[d] = orden[i % orden.length].id;
+    });
+    return prog;
+  };
+
+  const revisarAlerta = (dia: number) => {
+    const id = alertasRef.current[dia];
+    if (!id) return;
+    const resto: Record<number, string> = {};
+    for (const k of Object.keys(alertasRef.current)) {
+      const n = Number(k);
+      if (n !== dia) resto[n] = alertasRef.current[n];
+    }
+    alertasRef.current = resto;
+    const alerta = ALERTAS.find((a) => a.id === id) ?? null;
+    if (alerta) {
+      sfx.alarm();
+      setAlertaActiva(alerta);
+      setHoustonMsg(`📡 🚨 ¡Emergencia! ${alerta.titulo}`);
+    }
+  };
   const [debrief, setDebrief] = useState<{ pasos: PasoRes[]; resultado: "sigue" | "gana" | "pierde" } | null>(null);
   const doneRef = useRef<(() => void) | null>(null);
   const activeSeqRef = useRef(0);
@@ -146,10 +184,12 @@ export default function PlayPage() {
     if (segundos <= 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFase("planificar");
+      revisarAlerta(state.dia);
       return;
     }
     const t = setTimeout(() => setSegundos((s) => s - 1), 1000);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase, segundos, state.gameOver]);
 
   const mano = useMemo(() => {
@@ -367,6 +407,35 @@ export default function PlayPage() {
     setTrueques((t) => t + 1);
   };
 
+  const elegirOpcionAlerta = (alerta: Alerta, op: OpcionAlerta) => {
+    if (state.gameOver) return;
+    sfx.click();
+    const recursos = { ...state.recursos };
+    for (const k of Object.keys(op.efecto) as (keyof Recursos)[]) {
+      recursos[k] = clamp(recursos[k] + (op.efecto[k] ?? 0));
+    }
+    const ns: GameState = { ...state, recursos, log: [...state.log, `🚨 Alerta: ${alerta.titulo} → ${op.nombre}`] };
+    setAlertaActiva(null);
+    const net = (Object.values(op.efecto) as number[]).reduce((a, v) => a + v, 0);
+    if (net > 0) sfx.pop();
+    else if (net < 0) sfx.hit();
+    const check = verificarColapso(ns);
+    if (check.gameOver) {
+      const equi = equilibrioDe(check.recursos);
+      const stars = estrellasPara(check.won, equi);
+      setEstrellasGanadas(stars);
+      if (mision && stars > 0) setEstrellas(saveStar(mision.id, stars));
+      if (check.won) sfx.win();
+      else sfx.lose();
+      setHoustonMsg(check.won ? HOUSTON_WIN : HOUSTON_LOSE);
+      setState(check);
+      setMensaje(check.causaDerrota ?? "Colapso");
+      return;
+    }
+    setState(check);
+    setHoustonMsg(`📡 ¡Bien decidido! ${op.explicacion}`);
+  };
+
   const hacerRutina = (r: Rutina) => {
     if (fase !== "planificar" || resol || state.gameOver) return;
     if (rutinaDia === state.dia || !enCalma(state.recursos)) return;
@@ -384,7 +453,10 @@ export default function PlayPage() {
     sfx.pop();
   };
 
-  const saltarNegociacion = () => setFase("planificar");
+  const saltarNegociacion = () => {
+    setFase("planificar");
+    revisarAlerta(state.dia);
+  };
 
   const iniciar = (m: Mision) => {
     seqRef.current++;
@@ -403,6 +475,8 @@ export default function PlayPage() {
     setDeckSup(m.guion ? buildDeckFijo(m.guion) : shuffle(buildDeckSupervivencia()));
     setDeckRojo(m.ataques ? buildAtaquesFijos(m.ataques) : shuffle(buildDeckAtaque()));
     setTimeline(buildTimelineFor(m, shuffle(buildDeckEventos())));
+    alertasRef.current = programarAlertas(m.dias);
+    setAlertaActiva(null);
     setHandIdx(0);
     setRojoIdx(0);
     setHoverImpact(null);
@@ -433,6 +507,8 @@ export default function PlayPage() {
     setDeckSup(mision?.guion ? buildDeckFijo(mision.guion) : shuffle(buildDeckSupervivencia()));
     setDeckRojo(mision?.ataques ? buildAtaquesFijos(mision.ataques) : shuffle(buildDeckAtaque()));
     setTimeline(mision ? buildTimelineFor(mision, shuffle(buildDeckEventos())) : shuffle(buildDeckEventos()).slice(0, 5));
+    alertasRef.current = programarAlertas(dias);
+    setAlertaActiva(null);
     setHandIdx(0);
     setRojoIdx(0);
     setHoverImpact(null);
@@ -459,6 +535,7 @@ export default function PlayPage() {
   const cambiarMision = () => {
     seqRef.current++;
     doneRef.current = null;
+    setAlertaActiva(null);
     setMision(null);
     setResol(null);
     setRecap([]);
@@ -628,6 +705,58 @@ export default function PlayPage() {
                 >
                   ¡Entendido! →
                 </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* alerta sorpresa: el astronauta interrumpe y explica las opciones */}
+        <AnimatePresence>
+          {alertaActiva && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            >
+              <div className="w-full max-w-md rounded-[24px] border-4 border-red-500 bg-[#0d1119] p-5 text-center">
+                <div className="flex justify-center">
+                  <Astronauta mood="preocupado" size={88} />
+                </div>
+                <h2 className="mt-2 text-xl font-black">
+                  {alertaActiva.emoji} ¡EMERGENCIA! {alertaActiva.titulo}
+                </h2>
+                <p className="mt-2 rounded-xl bg-white/5 px-3 py-2 text-sm leading-5 text-white/85">
+                  📡 {alertaActiva.historia}
+                </p>
+                <div className="mt-2 text-[11px] font-black tracking-widest text-white/55">
+                  HOUSTON TE EXPLICA: NO HAY MALAS, SOLO DISTINTAS
+                </div>
+                <div className="mt-2 space-y-2 text-left">
+                  {alertaActiva.opciones.map((op) => (
+                    <button
+                      key={op.id}
+                      onClick={() => elegirOpcionAlerta(alertaActiva, op)}
+                      className="w-full rounded-2xl border-2 border-white/15 bg-white p-3 text-left text-zinc-900 transition hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-black">
+                          {op.emoji} {op.nombre}
+                        </span>
+                        <span className="flex gap-1">
+                          {Object.entries(op.efecto).map(([k, v]) => (
+                            <span key={k} className={`rounded-full px-2 py-0.5 text-xs font-black text-white ${v! > 0 ? "bg-emerald-600" : "bg-red-600"}`}>
+                              {v! > 0 ? `+${v}` : v}
+                              {META[k as keyof Recursos].icon}
+                            </span>
+                          ))}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs leading-4 text-zinc-600">📡 {op.explicacion}</div>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-white/40">Lee tranquilo, la emergencia te espera</p>
               </div>
             </motion.div>
           )}

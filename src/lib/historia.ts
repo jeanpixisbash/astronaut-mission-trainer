@@ -97,6 +97,48 @@ export type Rutina = {
   texto: string;
 };
 
+export type OpcionAlerta = {
+  id: string;
+  nombre: string;
+  emoji: string;
+  efecto: Partial<Recursos>;
+  explicacion: string;
+};
+
+export type Alerta = {
+  id: string;
+  titulo: string;
+  emoji: string;
+  historia: string;
+  opciones: OpcionAlerta[];
+};
+
+/** Sorpresas sin aviso (no salen en timeline ni en intent): el astronauta interrumpe y explica. */
+export const ALERTAS: Alerta[] = [
+  {
+    id: "fuego",
+    titulo: "¡Fuego a bordo!",
+    emoji: "🔥",
+    historia: "¡Chispazo en el módulo eléctrico! Huele a quemado. Hay que actuar YA.",
+    opciones: [
+      { id: "cortar", nombre: "Cortar la energía", emoji: "🔌", efecto: { energia: -15, escudo: 15 }, explicacion: "Sin chispa no hay fuego: ganas escudo pero gastas energía." },
+      { id: "ventilar", nombre: "Ventilar el módulo", emoji: "💨", efecto: { oxigeno: -15, energia: 10 }, explicacion: "Sacas el humo y ahorras energía, pero se escapa aire." },
+      { id: "aguantar", nombre: "Dejar que se consuma", emoji: "😬", efecto: { energia: 10, escudo: -20, oxigeno: -5 }, explicacion: "Ahorras de todo… pero el fuego muerde el casco. Arriesgado." },
+    ],
+  },
+  {
+    id: "basura",
+    titulo: "¡Basura espacial!",
+    emoji: "🛰️",
+    historia: "¡Un satélite muerto viene directo a ti! Quedan segundos para decidir.",
+    opciones: [
+      { id: "esquivar", nombre: "Maniobra evasiva", emoji: "🚀", efecto: { energia: -20, escudo: 20 }, explicacion: "Quemas energía para esquivarlo: quedas intacto pero vacío." },
+      { id: "girar", nombre: "Presentar el blindaje", emoji: "🛡️", efecto: { comida: -10, escudo: 15 }, explicacion: "Giras la base y el golpe da en lo duro. Todos adentro comen reservas." },
+      { id: "nada", nombre: "No hacer nada", emoji: "😴", efecto: { energia: 5, escudo: -25 }, explicacion: "Ahorras combustible… y rezas. Si pega, pega fuerte." },
+    ],
+  },
+];
+
 export const RUTINAS: Rutina[] = [
   { id: "limpiar", nombre: "Limpiar paneles", emoji: "🧹", efecto: { energia: 4 }, texto: "Le quitas el polvo a los paneles con el cepillo." },
   { id: "revisar", nombre: "Revisar reciclador", emoji: "🔧", efecto: { oxigeno: 4 }, texto: "Ajustas válvulas y el aire fluye mejor." },
