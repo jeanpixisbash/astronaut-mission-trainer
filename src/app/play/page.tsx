@@ -7,7 +7,7 @@ import { aplicarCarta, aplicarEventoGlobal, clamp, crearEstadoInicial, debeOcult
 import WindowView from "@/components/cockpit/WindowView";
 import { Crew, DetalleCarta, Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
 import { sceneFor } from "@/components/cockpit/scene";
-import { MISIONES, buildTimelineFor, type Mision } from "@/lib/missions";
+import { MISIONES, buildAtaquesFijos, buildDeckFijo, buildTimelineFor, type Mision } from "@/lib/missions";
 import { loadStars, marcarTutoVisto, saveStar, tutoVisto } from "@/lib/progress";
 import { isMuted, setMuted, sfx } from "@/lib/sound";
 
@@ -89,6 +89,8 @@ export default function PlayPage() {
   const [estrellasGanadas, setEstrellasGanadas] = useState(0);
   const [muted, setMutedState] = useState(() => isMuted());
   const [tutOff, setTutOff] = useState(() => (typeof window !== "undefined" ? tutoVisto() : false));
+  const [protocoloUsado, setProtocoloUsado] = useState(false);
+  const [truequeUsado, setTruequeUsado] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -127,6 +129,7 @@ export default function PlayPage() {
   const avanzar = (carta: CartaSupervivencia) => {
     if (state.gameOver || fase !== "planificar" || resol) return;
     if (state.pa < carta.pa) return;
+    if (protocolo) setProtocoloUsado(true);
 
     const pasos: PasoRes[] = [];
     const vistas: Recursos[] = [];
@@ -263,6 +266,7 @@ export default function PlayPage() {
     }
     setState((s) => ({ ...s, recursos: res.recursos, log: [...s.log, `🤝 Trueque: ${res.msg}`] }));
     setMensaje(`🤝 ${res.msg}`);
+    setTruequeUsado(true);
   };
 
   const saltarNegociacion = () => setFase("planificar");
@@ -272,8 +276,8 @@ export default function PlayPage() {
     sfx.click();
     setMision(m);
     setState(crearEstadoInicial(m.dias));
-    setDeckSup(shuffle(buildDeckSupervivencia()));
-    setDeckRojo(shuffle(buildDeckAtaque()));
+    setDeckSup(m.guion ? buildDeckFijo(m.guion) : shuffle(buildDeckSupervivencia()));
+    setDeckRojo(m.ataques ? buildAtaquesFijos(m.ataques) : shuffle(buildDeckAtaque()));
     setTimeline(buildTimelineFor(m, shuffle(buildDeckEventos())));
     setHandIdx(0);
     setRojoIdx(0);
@@ -287,6 +291,8 @@ export default function PlayPage() {
     setRecap([]);
     setSel(null);
     setEstrellasGanadas(0);
+    setProtocoloUsado(false);
+    setTruequeUsado(false);
   };
 
   const reiniciar = () => {
@@ -308,6 +314,8 @@ export default function PlayPage() {
     setRecap([]);
     setSel(null);
     setEstrellasGanadas(0);
+    setProtocoloUsado(false);
+    setTruequeUsado(false);
   };
 
   const cambiarMision = () => {
@@ -390,9 +398,9 @@ export default function PlayPage() {
               <div className="w-full max-w-2xl rounded-[24px] border-4 border-[#343b4a] bg-[#0d1119] p-4 sm:p-6">
                 <h2 className="text-center text-xl font-black">🚀 ELIGE TU MISIÓN</h2>
                 <p className="mt-1 text-center text-xs text-white/60">Gana una para desbloquear la siguiente. Las estrellas premian el equilibrio.</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {MISIONES.map((m, i) => {
-                    const desbloqueada = i === 0 || (estrellas[MISIONES[i - 1].id] ?? 0) > 0;
+                    const desbloqueada = i === 0 || (estrellas[MISIONES[i - 1].id] ?? 0) > 0 || (estrellas[m.id] ?? 0) > 0;
                     const ms = estrellas[m.id] ?? 0;
                     return (
                       <button
@@ -445,6 +453,22 @@ export default function PlayPage() {
               </div>
 
               <Crew recursos={vistaActual} />
+
+              {mision?.id === "m0" && !state.gameOver && (
+                <div className="mt-1.5 rounded-xl border border-white/15 bg-white/[0.05] px-3 py-2">
+                  <div className="text-[10px] font-black tracking-widest text-white/50">🎓 LISTA DE ENTRENAMIENTO</div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold">
+                    <span className={state.dia > 1 ? "text-emerald-300" : "text-white/60"}>{state.dia > 1 ? "✅" : "⭕"} Juega una carta</span>
+                    <span className={state.dia > 2 ? "text-emerald-300" : "text-white/60"}>{state.dia > 2 ? "✅" : "⭕"} Sobrevive al ataque rojo</span>
+                    <span className={protocoloUsado || truequeUsado || state.dia > 3 ? "text-emerald-300" : "text-white/60"}>
+                      {protocoloUsado || truequeUsado || state.dia > 3 ? "✅" : "⭕"} Protégete (protocolo o trueque)
+                    </span>
+                  </div>
+                </div>
+              )}
+              {mision?.id === "m0" && state.dia === 1 && fase === "planificar" && !resol && !state.gameOver && (
+                <div className="animate-bounce pt-1 text-center text-2xl" aria-hidden>👇</div>
+              )}
               <AnimatePresence>
                 {pasoActual && (
                   <motion.div

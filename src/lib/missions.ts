@@ -1,4 +1,4 @@
-import { EVENTOS_GLOBALES, type EventoGlobal } from "./cardsCatalog";
+import { EVENTOS_GLOBALES, SUPERVIVENCIA, ATAQUE, type EventoGlobal } from "./cardsCatalog";
 
 export type Mision = {
   id: string;
@@ -9,9 +9,24 @@ export type Mision = {
   objetivo: string;
   /** día -> id de evento forzado en el timeline */
   forzados: Record<number, string>;
+  /** mazo guionado (ids en orden, sin shuffle). Estilo Mario 1-1: solo puedes hacer lo correcto. */
+  guion?: string[];
+  /** ataques guionados de la IA (ids en orden). Rival fácil tipo Clash Royale. */
+  ataques?: string[];
 };
 
 export const MISIONES: Mision[] = [
+  {
+    id: "m0",
+    nombre: "Entrenamiento",
+    emoji: "🎓",
+    dias: 3,
+    descripcion: "Práctica guionada: pocas cartas fáciles y rival suave.",
+    objetivo: "Completa la lista: juega, sobrevive y protege.",
+    forzados: { 3: "viento-calmo" },
+    guion: ["paneles-gigantes", "raciones", "sabatier", "sellado", "espirulina", "hidroponico"],
+    ataques: ["sabotaje-termico", "fuga-criogenica", "interferencia"],
+  },
   {
     id: "m1",
     nombre: "Primera noche",
@@ -42,8 +57,7 @@ export const MISIONES: Mision[] = [
 ];
 
 /** Timeline de 5 slots (días 3/6/9/12/15) con forzados de la misión pisando el azar. */
-export function buildTimelineFor(m: Mision, azar: EventoGlobal[]): EventoGlobal[] {
-  const base = azar.slice(0, 5);
+export function buildTimelineFor(m: Mision, azar: EventoGlobal[]): EventoGlobal[] {  const base = azar.slice(0, 5);
   while (base.length < 5) base.push(azar[base.length % azar.length]);
   const dias = [3, 6, 9, 12, 15];
   return base.map((ev, i) => {
@@ -51,4 +65,16 @@ export function buildTimelineFor(m: Mision, azar: EventoGlobal[]): EventoGlobal[
     if (!forzadoId) return ev;
     return EVENTOS_GLOBALES.find((e) => e.id === forzadoId) ?? ev;
   });
+}
+
+/** Mazo fijo en orden (sin shuffle) para misiones guionadas. */
+export function buildDeckFijo(ids: string[]) {
+  const porId = new Map(SUPERVIVENCIA.map((c) => [c.id, c]));
+  return ids.map((id) => ({ ...(porId.get(id) ?? SUPERVIVENCIA[0]) }));
+}
+
+/** Ataques fijos en orden para misiones guionadas. */
+export function buildAtaquesFijos(ids: string[]) {
+  const porId = new Map(ATAQUE.map((c) => [c.id, c]));
+  return ids.map((id) => ({ ...(porId.get(id) ?? ATAQUE[0]) }));
 }
