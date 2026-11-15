@@ -8,6 +8,19 @@ import WindowView from "@/components/cockpit/WindowView";
 import { Crew, DetalleCarta, Hand, META, ResourceStrip } from "@/components/cockpit/TabletCards";
 import { sceneFor } from "@/components/cockpit/scene";
 import { MISIONES, buildAtaquesFijos, buildDeckFijo, buildTimelineFor, type Mision } from "@/lib/missions";
+import {
+  BRIEFINGS,
+  BRIEFING_DEFAULT,
+  HOUSTON_CALMA,
+  HOUSTON_LOSE,
+  HOUSTON_WIN,
+  REACCION_ATAQUE,
+  REACCION_EVENTO,
+  RUTINAS,
+  enCalma,
+  reaccionDesgaste,
+  type Rutina,
+} from "@/lib/historia";
 import { loadStars, marcarTutoVisto, saveStar, tutoVisto } from "@/lib/progress";
 import { isMuted, setMuted, sfx } from "@/lib/sound";
 
@@ -20,7 +33,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-type PasoRes = { emoji: string; titulo: string; detalle: string; deltas: Partial<Recursos> };
+type PasoRes = { emoji: string; titulo: string; detalle: string; houston?: string; deltas: Partial<Recursos> };
 
 const FAMILIA_ICON: Record<string, string> = { energia: "⚡", soporte: "💧", biodomo: "🌱", blindaje: "🛡️" };
 
@@ -93,6 +106,9 @@ export default function PlayPage() {
   const [truequeUsado, setTruequeUsado] = useState(false);
   const [reforzar, setReforzar] = useState(false);
   const [trueques, setTrueques] = useState(0);
+  const [briefing, setBriefing] = useState(false);
+  const [houstonMsg, setHoustonMsg] = useState("📡 Houston en línea. ¡Buena suerte!");
+  const [rutinaDia, setRutinaDia] = useState<number | null>(null);
   const doneRef = useRef<(() => void) | null>(null);
   const activeSeqRef = useRef(0);
 
@@ -159,7 +175,7 @@ export default function PlayPage() {
     const ataque = deckRojo[rojoIdx % deckRojo.length];
     if (ataque.id === "interferencia") {
       next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, `🔴 IA: ${ataque.nombre} — ¡telemetría oculta 1 turno!`] };
-      pasos.push({ emoji: "👁️", titulo: ataque.nombre, detalle: ataque.explicacion, deltas: {} });
+      pasos.push({ emoji: "👁️", titulo: ataque.nombre, detalle: ataque.explicacion, houston: REACCION_ATAQUE[ataque.id], deltas: {} });
       vistas.push({ ...next.recursos });
     } else {
       const efecto: Partial<Recursos> = { ...ataque.efectoRival };
@@ -173,7 +189,7 @@ export default function PlayPage() {
         }
         next.log = [...next.log, `🔴 Ataque IA: ${ataque.nombre} ${JSON.stringify(efecto)}${protocolo ? " (½ por Protocolo)" : ""}`];
       }
-      pasos.push({ emoji: "🔴", titulo: ataque.nombre, detalle: ataque.explicacion, deltas: efecto });
+      pasos.push({ emoji: "🔴", titulo: ataque.nombre, detalle: ataque.explicacion, houston: REACCION_ATAQUE[ataque.id] ?? "¡Oh no! ¡Algo golpea la colonia!", deltas: efecto });
       vistas.push({ ...next.recursos });
     }
 
@@ -191,7 +207,7 @@ export default function PlayPage() {
         next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, `🌌 Evento global: ${eventoHoy.nombre} — ¡radio muerta 1 turno!`] };
       }
       if (Object.keys(efecto).length) next = aplicarEventoGlobal(next, efecto, eventoHoy.nombre);
-      pasos.push({ emoji: eventoHoy.id === "conjuncion-solar" ? "👁️" : "🌌", titulo: eventoHoy.nombre, detalle: eventoHoy.explicacion, deltas: efecto });
+      pasos.push({ emoji: eventoHoy.id === "conjuncion-solar" ? "👁️" : "🌌", titulo: eventoHoy.nombre, detalle: eventoHoy.explicacion, houston: REACCION_EVENTO[eventoHoy.id] ?? "¡Oh no! ¡El espacio ataca!", deltas: efecto });
       vistas.push({ ...next.recursos });
     }
 
@@ -203,6 +219,7 @@ export default function PlayPage() {
       if (mision && stars > 0) setEstrellas(saveStar(mision.id, stars));
       if (failed.won) sfx.win();
       else sfx.lose();
+      setHoustonMsg(failed.won ? HOUSTON_WIN : HOUSTON_LOSE);
       setState(failed);
       setMensaje(failed.causaDerrota ?? (failed.won ? "¡Victoria!" : "Colapso"));
       setRojoIdx((i) => (i + 1) % deckRojo.length);
@@ -219,7 +236,15 @@ export default function PlayPage() {
     let siguiente: GameState = { ...check, dia: siguienteDia, pa: 3, protocoloActivo: false };
     if (siguienteDia > 1 && siguienteDia <= check.maxDias) {
       siguiente = desgasteBase(siguiente);
-      pasos.push({ emoji: "😴", titulo: "Desgaste de la noche", detalle: "La tripulación respira, bebe y come: la base gasta sola cada noche.", deltas: { energia: -5, oxigeno: -5, comida: -5 } });
+      const vals = Object.entries(siguiente.recursos) as [keyof Recursos, number][];
+      const peor = [...vals].sort((a, b) => a[1] - b[1])[0];
+      pasos.push({
+        emoji: "😴",
+        titulo: "Desgaste de la noche",
+        detalle: "La tripulación respira, bebe y come: la base gasta sola cada noche.",
+        houston: peor[1] <= 25 ? reaccionDesgaste(peor[0]) : undefined,
+        deltas: { energia: -5, oxigeno: -5, comida: -5 },
+      });
       vistas.push({ ...siguiente.recursos });
       const check2 = verificarColapso(siguiente);
       if (check2.gameOver) {
@@ -237,6 +262,18 @@ export default function PlayPage() {
       playSequence(pasos, vistas, seq, () => {
         if (seqRef.current !== seq) return;
         setState(go);
+        // Houston comenta el nuevo día
+        const valsGo = Object.values(go.recursos) as number[];
+        const minGo = Math.min(...valsGo);
+        if (minGo <= 20) {
+          const entriesGo = Object.entries(go.recursos) as [keyof Recursos, number][];
+          const peorGo = entriesGo.sort((a, b) => a[1] - b[1])[0][0];
+          setHoustonMsg(`📡 ${reaccionDesgaste(peorGo)}`);
+        } else if (enCalma(go.recursos)) {
+          setHoustonMsg(`📡 ${HOUSTON_CALMA[go.dia % HOUSTON_CALMA.length]}`);
+        } else {
+          setHoustonMsg(`📡 Día ${go.dia}. Houston vigila.`);
+        }
         // Tutorial: negociación recién desde el día 3
         if (go.dia >= 3) {
           setFase("negociar");
@@ -299,6 +336,23 @@ export default function PlayPage() {
     setTrueques((t) => t + 1);
   };
 
+  const hacerRutina = (r: Rutina) => {
+    if (fase !== "planificar" || resol || state.gameOver) return;
+    if (rutinaDia === state.dia || !enCalma(state.recursos)) return;
+    sfx.click();
+    const recursos = { ...state.recursos };
+    for (const k of Object.keys(r.efecto) as (keyof Recursos)[]) {
+      recursos[k] = clamp(recursos[k] + (r.efecto[k] ?? 0));
+    }
+    const que = Object.entries(r.efecto)
+      .map(([k, v]) => `+${v} ${k}`)
+      .join(" ");
+    setState((s) => ({ ...s, recursos, log: [...s.log, `📋 Rutina: ${r.nombre} (${que})`] }));
+    setRutinaDia(state.dia);
+    setHoustonMsg(`📡 ¡Buen mantenimiento! ${r.texto}`);
+    sfx.pop();
+  };
+
   const saltarNegociacion = () => setFase("planificar");
 
   const iniciar = (m: Mision) => {
@@ -334,6 +388,9 @@ export default function PlayPage() {
     setTruequeUsado(false);
     setReforzar(false);
     setTrueques(0);
+    setBriefing(true);
+    setHoustonMsg("📡 Houston en línea. ¡Buena suerte!");
+    setRutinaDia(null);
     doneRef.current = null;
   };
 
@@ -360,6 +417,9 @@ export default function PlayPage() {
     setTruequeUsado(false);
     setReforzar(false);
     setTrueques(0);
+    setBriefing(true);
+    setHoustonMsg("📡 Houston en línea. ¡Buena suerte!");
+    setRutinaDia(null);
     doneRef.current = null;
   };
 
@@ -481,6 +541,55 @@ export default function PlayPage() {
           <div className="min-w-0 flex-1">
             <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
 
+            {/* feed Houston */}
+            {mision && (
+              <div className="border-x-[10px] border-[#343b4a] bg-[#10141f] px-3 py-1.5">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={houstonMsg}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-center text-xs font-bold leading-4 text-cyan-200"
+                  >
+                    {houstonMsg}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* briefing Houston */}
+            <AnimatePresence>
+              {briefing && mision && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+                >
+                  <div className="w-full max-w-md rounded-[24px] border-4 border-cyan-400 bg-[#0d1119] p-5 text-center">
+                    <div className="text-5xl" aria-hidden>📡</div>
+                    <h2 className="mt-2 text-lg font-black">{(BRIEFINGS[mision.id] ?? BRIEFING_DEFAULT).titulo}</h2>
+                    <div className="mt-3 space-y-2">
+                      {(BRIEFINGS[mision.id] ?? BRIEFING_DEFAULT).lineas.map((l, i) => (
+                        <p key={i} className="rounded-xl bg-white/5 px-3 py-2 text-sm leading-5 text-white/85">{l}</p>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        sfx.click();
+                        setBriefing(false);
+                      }}
+                      className="mt-4 w-full rounded-full bg-cyan-400 py-2.5 text-sm font-black text-black active:scale-[0.98]"
+                    >
+                      ¡Entendido, Houston! 🚀
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* tablet */}
             <div className="rounded-b-[26px] border-[10px] border-t-0 border-[#343b4a] bg-[#0d1119] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.6)] sm:p-3">
               <div className="flex items-center justify-between gap-2 px-1 pb-2">
@@ -529,7 +638,8 @@ export default function PlayPage() {
                     exit={{ opacity: 0 }}
                     className="mt-1.5 rounded-xl border border-white/15 bg-white/[0.05] px-3 py-1.5 text-center text-xs leading-4 text-white/85"
                   >
-                    <span className="font-black">{pasoActual.emoji} {pasoActual.titulo}:</span> {pasoActual.detalle}
+                    <span className="font-black">{pasoActual.emoji} {pasoActual.titulo}:</span>{" "}
+                    {pasoActual.houston ? `📡 ${pasoActual.houston}` : pasoActual.detalle}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -573,6 +683,28 @@ export default function PlayPage() {
                       : Object.entries(proximoAtaque.efectoRival).map(([k, v]) => `${v! > 0 ? `+${v}` : v}${META[k as keyof Recursos].icon}`).join(" ")}
                     {" "}· juega escudo o ¡a cubierto!
                   </span>
+                </div>
+              )}
+
+              {!state.gameOver && !resol && fase === "planificar" && rutinaDia !== state.dia && enCalma(state.recursos) && (
+                <div className="mt-2 rounded-2xl border border-emerald-400/40 bg-emerald-400/10 p-2.5">
+                  <div className="text-[11px] font-black tracking-widest text-emerald-300">📋 RUTINA GRATIS (1 POR DÍA)</div>
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                    {RUTINAS.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => hacerRutina(r)}
+                        title={r.texto}
+                        className="rounded-xl border border-emerald-400/30 bg-black/30 px-2 py-1.5 text-left transition hover:bg-black/50 active:scale-[0.97]"
+                      >
+                        <div className="text-base leading-none">{r.emoji}</div>
+                        <div className="mt-0.5 text-[11px] font-black leading-tight">{r.nombre}</div>
+                        <div className="text-[11px] font-bold text-emerald-300">
+                          {Object.entries(r.efecto).map(([k, v]) => `+${v}${META[k as keyof Recursos].icon}`).join(" ")}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
