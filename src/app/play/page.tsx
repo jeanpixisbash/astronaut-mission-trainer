@@ -49,6 +49,25 @@ function estrellasPara(won: boolean, equi: number): number {
   return equi >= 70 ? 3 : equi >= 40 ? 2 : 1;
 }
 
+function textoDeltas(deltas: Partial<Recursos>): string {
+  const partes = (Object.entries(deltas) as [keyof Recursos, number][]).filter(([, v]) => v !== 0);
+  if (partes.length === 0) return "Sin daño directo.";
+  return partes.map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${META[k].label}`).join(" · ");
+}
+
+function netoPasos(pasos: PasoRes[]): Partial<Recursos> {
+  const neto: Partial<Recursos> = {};
+  for (const p of pasos) {
+    for (const [k, v] of Object.entries(p.deltas) as [keyof Recursos, number][]) {
+      neto[k] = (neto[k] ?? 0) + v;
+    }
+  }
+  for (const k of Object.keys(neto) as (keyof Recursos)[]) {
+    if (neto[k] === 0) delete neto[k];
+  }
+  return neto;
+}
+
 function SideConsole({ side }: { side: "left" | "right" }) {
   return (
     <div className={`hidden w-24 shrink-0 flex-col gap-2 rounded-2xl border-4 border-[#343b4a] bg-gradient-to-b from-[#2b3242] to-[#171c27] p-2 xl:flex ${side === "left" ? "rounded-r-none border-r-0" : "rounded-l-none border-l-0"}`} aria-hidden>
@@ -110,8 +129,10 @@ export default function PlayPage() {
   const [briefing, setBriefing] = useState(false);
   const [houstonMsg, setHoustonMsg] = useState("📡 Houston en línea. ¡Buena suerte!");
   const [rutinaDia, setRutinaDia] = useState<number | null>(null);
+  const [debrief, setDebrief] = useState<{ pasos: PasoRes[]; resultado: "sigue" | "gana" | "pierde" } | null>(null);
   const doneRef = useRef<(() => void) | null>(null);
   const activeSeqRef = useRef(0);
+  const resultadoRef = useRef<"sigue" | "gana" | "pierde">("sigue");
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -229,7 +250,7 @@ export default function PlayPage() {
 
     const check = verificarColapso(next);
     if (check.gameOver) {
-      playSequence(pasos, vistas, seq, () => finalizeColapso(check), ataque);
+      playSequence(pasos, vistas, seq, () => finalizeColapso(check), ataque, check.won ? "gana" : "pierde");
       return;
     }
 
@@ -249,7 +270,7 @@ export default function PlayPage() {
       vistas.push({ ...siguiente.recursos });
       const check2 = verificarColapso(siguiente);
       if (check2.gameOver) {
-        playSequence(pasos, vistas, seq, () => finalizeColapso(check2), ataque);
+        playSequence(pasos, vistas, seq, () => finalizeColapso(check2), ataque, "pierde");
         return;
       }
       siguiente = check2;
@@ -257,7 +278,7 @@ export default function PlayPage() {
 
     if (siguienteDia > check.maxDias) {
       const final = verificarColapso({ ...siguiente, dia: check.maxDias });
-      playSequence(pasos, vistas, seq, () => finalizeColapso(final), ataque);
+      playSequence(pasos, vistas, seq, () => finalizeColapso(final), ataque, final.won ? "gana" : "pierde");
     } else {
       const go = { ...siguiente };
       playSequence(pasos, vistas, seq, () => {
@@ -288,11 +309,11 @@ export default function PlayPage() {
         setHoverImpact(null);
         setSel(null);
         setResol(null);
-      }, ataque);
+      }, ataque, "sigue");
     }
   };
 
-  const playSequence = (pasos: PasoRes[], vistas: Recursos[], seq: number, done: () => void, ataque: CartaAtaque) => {
+  const playSequence = (pasos: PasoRes[], vistas: Recursos[], seq: number, done: () => void, ataque: CartaAtaque, resultado: "sigue" | "gana" | "pierde") => {
     setUltimoAtaque(ataque);
     setRecap(pasos);
     setSel(null);
@@ -300,10 +321,12 @@ export default function PlayPage() {
     setReforzar(false);
     doneRef.current = done;
     activeSeqRef.current = seq;
+    resultadoRef.current = resultado;
     setResol({ pasos, vistas, i: 0 });
   };
 
-  // Resolución manual paso a paso (estilo mesa): el jugador avanza cuando termina de leer
+  // Resolución manual paso a paso (estilo mesa): el jugador avanza cuando termina de leer.
+  // Al final no se aplica nada todavía: primero el astronauta explica (debrief).
   const avanzarPaso = () => {
     if (!resol || seqRef.current !== activeSeqRef.current) return;
     if (resol.i < resol.pasos.length) {
@@ -312,11 +335,18 @@ export default function PlayPage() {
       if (net > 0) sfx.pop();
       else if (net < 0) sfx.hit();
       setResol({ ...resol, i: resol.i + 1 });
-    } else {
-      const d = doneRef.current;
-      doneRef.current = null;
-      d?.();
+    } else if (!debrief) {
+      sfx.click();
+      setDebrief({ pasos: resol.pasos, resultado: resultadoRef.current });
     }
+  };
+
+  const cerrarDebrief = () => {
+    sfx.click();
+    const d = doneRef.current;
+    doneRef.current = null;
+    setDebrief(null);
+    d?.();
   };
 
   const hacerTrueque = () => {
@@ -383,6 +413,7 @@ export default function PlayPage() {
     setUltimoAtaque(null);
     setResol(null);
     setRecap([]);
+    setDebrief(null);
     setSel(null);
     setEstrellasGanadas(0);
     setProtocoloUsado(false);
@@ -412,6 +443,7 @@ export default function PlayPage() {
     setUltimoAtaque(null);
     setResol(null);
     setRecap([]);
+    setDebrief(null);
     setSel(null);
     setEstrellasGanadas(0);
     setProtocoloUsado(false);
@@ -430,6 +462,7 @@ export default function PlayPage() {
     setMision(null);
     setResol(null);
     setRecap([]);
+    setDebrief(null);
     setSel(null);
     setMensaje(null);
     setUltimoAtaque(null);
@@ -538,6 +571,63 @@ export default function PlayPage() {
                     );
                   })}
                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* debrief: el astronauta explica qué pasó, en grande */}
+        <AnimatePresence>
+          {debrief && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            >
+              <div className="w-full max-w-md rounded-[24px] border-4 border-amber-400 bg-[#0d1119] p-5 text-center">
+                <div className="flex justify-center">
+                  <Astronauta
+                    mood={debrief.resultado === "pierde" ? "triste" : debrief.resultado === "gana" ? "campeon" : "feliz"}
+                    size={96}
+                  />
+                </div>
+                <h2 className="mt-2 text-xl font-black">
+                  {debrief.resultado === "pierde" ? "💥 ¡OH NO! ¿QUÉ PASÓ?" : debrief.resultado === "gana" ? "🎉 ¡ÚLTIMO DÍA! ¿QUÉ PASÓ?" : "🧑‍🚀 ¿QUÉ PASÓ?"}
+                </h2>
+                <div className="mt-3 space-y-2 text-left">
+                  {debrief.pasos.map((p, i) => (
+                    <div key={i} className="rounded-xl bg-white/5 px-3 py-2">
+                      <div className="text-sm font-black">
+                        {p.emoji} {p.titulo}
+                      </div>
+                      <div className="text-sm leading-5 text-white/80">{textoDeltas(p.deltas)}</div>
+                    </div>
+                  ))}
+                </div>
+                {(() => {
+                  const neto = netoPasos(debrief.pasos);
+                  const entradas = Object.entries(neto) as [keyof Recursos, number][];
+                  if (entradas.length === 0) return null;
+                  return (
+                    <div className="mt-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
+                      <div className="text-[11px] font-black tracking-widest text-white/55">📊 TOTAL DEL DÍA</div>
+                      <div className="mt-1 flex flex-wrap justify-center gap-1.5">
+                        {entradas.map(([k, v]) => (
+                          <span key={k} className={`rounded-full px-2.5 py-1 text-sm font-black text-white ${v > 0 ? "bg-emerald-500" : "bg-red-500"}`}>
+                            {v > 0 ? `+${v}` : v} {META[k].icon} {META[k].label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+                <button
+                  onClick={cerrarDebrief}
+                  className="mt-4 w-full rounded-full bg-white py-3 text-base font-black text-black active:scale-[0.98]"
+                >
+                  ¡Entendido! →
+                </button>
               </div>
             </motion.div>
           )}
