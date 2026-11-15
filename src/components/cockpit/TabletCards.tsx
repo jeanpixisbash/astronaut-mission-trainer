@@ -17,7 +17,7 @@ const FAMILIA_STYLE: Record<string, { bg: string; icon: string }> = {
   blindaje: { bg: "#8b5cf6", icon: "🛡️" },
 };
 
-export function ResourceStrip({ recursos, oculto, preview }: { recursos: Recursos; oculto: boolean; preview?: Recursos | null }) {
+export function ResourceStrip({ recursos, oculto, preview, flash }: { recursos: Recursos; oculto: boolean; preview?: Recursos | null; flash?: Partial<Recursos> | null }) {
   return (
     <div className="flex items-center justify-center gap-4 rounded-xl bg-[#10141f] px-4 py-2 sm:gap-8">
       {(Object.keys(META) as (keyof Recursos)[]).map((k) => {
@@ -25,8 +25,9 @@ export function ResourceStrip({ recursos, oculto, preview }: { recursos: Recurso
         const pv = preview?.[k];
         const delta = pv !== undefined && !oculto ? pv - v : 0;
         const danger = v <= 20 || v >= 85;
+        const f = flash?.[k] ?? 0;
         return (
-          <div key={k} className="text-center">
+          <div key={k} className="relative text-center">
             <div className="text-[10px] font-black tracking-widest text-white/55">{META[k].label}</div>
             <div className={`text-lg font-black tabular-nums ${oculto ? "text-white/40" : danger ? "text-red-400" : "text-white"}`}>
               {META[k].icon} {oculto ? "?" : v}
@@ -36,6 +37,19 @@ export function ResourceStrip({ recursos, oculto, preview }: { recursos: Recurso
                 </span>
               )}
             </div>
+            <AnimatePresence>
+              {f !== 0 && !oculto && (
+                <motion.span
+                  key={`${k}-${f}`}
+                  initial={{ y: 6, opacity: 0, scale: 0.8 }}
+                  animate={{ y: -12, opacity: 1, scale: 1.1 }}
+                  exit={{ y: -18, opacity: 0 }}
+                  className={`pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-xs font-black whitespace-nowrap ${f > 0 ? "bg-emerald-500 text-white" : "bg-red-500 text-white"}`}
+                >
+                  {f > 0 ? `+${f}` : f}
+                </motion.span>
+              )}
+            </AnimatePresence>
             <div className="mx-auto mt-1 h-1.5 w-14 overflow-hidden rounded-full bg-white/10 sm:w-20">
               <motion.div
                 className={`h-full ${v <= 0 || v >= 100 ? "bg-red-500" : danger ? "bg-amber-400" : "bg-emerald-400"}`}
@@ -54,6 +68,7 @@ export function Hand({
   handIdx,
   pa,
   disabled,
+  selectedKey,
   onPlay,
   onHover,
 }: {
@@ -61,6 +76,7 @@ export function Hand({
   handIdx: number;
   pa: number;
   disabled: boolean;
+  selectedKey: string | null;
   onPlay: (c: CartaSupervivencia) => void;
   onHover: (impacto: Partial<Recursos> | null) => void;
 }) {
@@ -70,9 +86,11 @@ export function Hand({
         {mano.map((c) => {
           const noPA = pa < c.pa;
           const fam = FAMILIA_STYLE[c.familia] ?? { bg: "#64748b", icon: "◉" };
+          const key = `${c.id}-${handIdx}`;
+          const selected = selectedKey === key;
           return (
             <motion.button
-              key={`${c.id}-${handIdx}`}
+              key={key}
               layout
               initial={{ rotateY: 90, y: 24, opacity: 0 }}
               animate={{ rotateY: 0, y: 0, opacity: 1 }}
@@ -86,7 +104,7 @@ export function Hand({
               onFocus={() => onHover(c.impacto)}
               onBlur={() => onHover(null)}
               disabled={disabled || noPA}
-              className="group relative flex min-h-[210px] flex-col rounded-2xl border-2 border-[#d8cfb4] bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] disabled:opacity-45 sm:min-h-[230px] sm:p-3"
+              className={`group relative flex min-h-[210px] flex-col rounded-2xl border-2 border-[#d8cfb4] bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] disabled:opacity-45 sm:min-h-[230px] sm:p-3 ${selected ? "ring-4 ring-cyan-400" : ""}`}
             >
               <span className="absolute left-2 top-2 grid size-6 place-items-center rounded-full border border-stone-400 bg-white/70 text-xs" aria-hidden>
                 {fam.icon}
@@ -109,7 +127,7 @@ export function Hand({
                 <b>NASA:</b> {c.fundamento}
               </span>
               <span className="rounded-full py-1 text-center text-[11px] font-black text-white" style={{ background: fam.bg }}>
-                {noPA ? `FALTAN ${c.pa - pa} PA` : disabled ? "···" : `▶ JUGAR`}
+                {noPA ? `FALTAN ${c.pa - pa} PA` : disabled ? "···" : selected ? "▶ TOCÁ DE NUEVO" : `▶ JUGAR`}
               </span>
             </motion.button>
           );
