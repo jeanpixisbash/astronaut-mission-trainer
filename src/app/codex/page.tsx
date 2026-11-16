@@ -8,6 +8,30 @@ const ICON: Record<string, string> = { energia: "⚡", oxigeno: "💧", comida: 
 
 type Filtro = "todas" | "energia" | "soporte" | "biodomo" | "blindaje" | "rojo" | "eventos";
 
+type Tab = "cartas" | "guia";
+
+const GUIA: { emoji: string; titulo: string; que: string; como: string }[] = [
+  { emoji: "🎯", titulo: "El objetivo", que: "Mantén tu colonia viva todos los días de la misión.", como: "Si cualquier barra llega a 0% o a 100%, la colonia colapsa. ¡Los dos extremos matan!" },
+  { emoji: "⚡", titulo: "Energía", que: "Electricidad de paneles y reactores. Todo la gasta.", como: "Sin energía no hay oxígeno ni comida. Cuídala de noche y con polvo." },
+  { emoji: "💧", titulo: "Oxígeno y agua", que: "El aire que respiras y el agua que bebes y reciclas.", como: "La tripulación gasta cada noche. La ISS recicla el 98% del agua." },
+  { emoji: "🌱", titulo: "Comida", que: "Raciones y lo que crece en el invernadero.", como: "Cada astronauta necesita unas 2500 kcal al día. ¡A sembrar!" },
+  { emoji: "🛡️", titulo: "Escudo", que: "Tu casco contra radiación y piedritas espaciales.", como: "Con Sol fuerte o tormenta, súbelo. Sin escudo, la tripulación se enferma." },
+  { emoji: "⚡", titulo: "Acciones (PA)", que: "Tus movimientos de cada día. Tienes 3.", como: "Cada carta gasta 1 a 3. Se acaban: elige bien. Vuelven cada amanecer." },
+  { emoji: "🛡️", titulo: "¡A cubierto!", que: "Te escondes y el daño se parte a la mitad.", como: "Úsalo el día que venga algo feo. Se desbloquea el día 3." },
+  { emoji: "⚡", titulo: "Reforzar", que: "Le metes +1 acción a una carta para +10 a su mejor efecto.", como: "Solo si te sobra una acción. ¿Vale la pena? Tú decides." },
+  { emoji: "🔄", titulo: "Girar cartas", que: "Cada carta se puede voltear como las de verdad.", como: "Atrás dice qué es, por qué jugarla y el dato NASA." },
+  { emoji: "🔭", titulo: "Se acerca…", que: "El ataque rojo que viene mañana, a la vista.", como: "Lee qué hace y prepara tu defensa hoy. Sin sorpresas." },
+  { emoji: "🌌", titulo: "Eventos globales", que: "El espacio pega cada 3 días: noche, Sol, polvo…", como: "Míralos en la línea de tiempo y guarda recursos antes." },
+  { emoji: "😴", titulo: "Desgaste de la noche", que: "Dormir también gasta: −5 energía, oxígeno y comida.", como: "Pasa solo, cada noche. Por eso nunca guardes todo para después." },
+  { emoji: "🚨", titulo: "Alertas sorpresa", que: "Fuego o basura espacial, sin aviso.", como: "El astronauta te frena y te explica las 3 opciones. Elige con calma." },
+  { emoji: "🤝", titulo: "Negociación", que: "Cambias 6% de algo por 3% de otra cosa.", como: "La radio solo da para 2 mensajes por día. ¡Que valgan!" },
+  { emoji: "📋", titulo: "Rutinas", que: "Tareas chiquitas gratis cuando todo está en calma.", como: "Si todo está entre 25 y 75, elige 1 por día: +4 gratis." },
+  { emoji: "👁️", titulo: "Sin telemetría", que: "Los % se esconden y ves ??.", como: "Dura 1 turno. Juega de memoria… ¡o espera al día siguiente!" },
+  { emoji: "⚖️", titulo: "Equilibrio", que: "Qué tan cerca está todo de 50%.", como: "Más equilibrio = más estrellas. Lo extremo colapsa." },
+  { emoji: "★", titulo: "Estrellas", que: "Tu nota: 1 por ganar, hasta 3 por equilibrio.", como: "Gana para desbloquear la siguiente misión. ¡Colecciónalas!" },
+  { emoji: "🎖️", titulo: "Veteranía", que: "Ganar una misión ayuda en la siguiente.", como: "Empiezas con +5 en tu barra más baja. ¡Los veteranos ayudan!" },
+];
+
 const FILTROS: { id: Filtro; label: string }[] = [
   { id: "todas", label: "Todas" },
   { id: "energia", label: "⚡ Energía" },
@@ -31,6 +55,7 @@ function Chips({ impacto }: { impacto: Partial<Record<string, number>> }) {
 }
 
 export default function CodexPage() {
+  const [tab, setTab] = useState<Tab>("cartas");
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [q, setQ] = useState("");
 
@@ -66,9 +91,42 @@ export default function CodexPage() {
       <main className="mx-auto w-full max-w-6xl px-4 pb-10">
         <h1 className="pt-5 text-2xl font-black">📖 Codex del astronauta</h1>
         <p className="mt-1 text-sm text-white/60">
-          Todas las cartas y eventos con su explicación y su fuente NASA real. Lee, aprende y vuelve a jugar mejor.
+          Lee las cartas o aprende cómo funciona cada cosa. Houston te explica todo.
         </p>
 
+        <div className="mt-3 flex gap-2">
+          {(
+            [
+              { id: "cartas", label: "🃏 Cartas" },
+              { id: "guia", label: "🎓 ¿Cómo funciona?" },
+            ] as { id: Tab; label: string }[]
+          ).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-1 rounded-2xl py-2.5 text-sm font-black ${tab === t.id ? "bg-white text-black" : "border border-white/15 bg-white/5 text-white/70"}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "guia" ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {GUIA.map((g) => (
+              <div key={g.titulo + g.emoji} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                <div className="text-base font-black">
+                  {g.emoji} {g.titulo}
+                </div>
+                <p className="mt-1 text-[13px] leading-5 text-white/85">{g.que}</p>
+                <p className="mt-1 rounded-xl bg-black/30 px-2.5 py-1.5 text-[13px] leading-5 text-white/70">
+                  <b className="text-emerald-300">¿Cómo funciona?</b> {g.como}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
         <div className="mt-3 flex flex-wrap gap-2">
           {FILTROS.map((f) => (
             <button
@@ -163,6 +221,8 @@ export default function CodexPage() {
         <p className="mt-8 text-center text-xs text-white/30">
           Fuentes: DONKI, OSDR, Mars Trek, programas NASA (MOXIE, FSP, ECLSS, Veggie) · Enlaces externos a nasa.gov
         </p>
+          </>
+        )}
       </main>
     </div>
   );

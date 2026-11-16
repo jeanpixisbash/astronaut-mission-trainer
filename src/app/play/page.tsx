@@ -1133,6 +1133,9 @@ export default function PlayPage() {
             </div>
             {mensaje && <div className="mt-1 text-xs font-bold text-amber-300">{mensaje}</div>}
             <div className="mt-1 text-[11px] text-white/40">Regla de Oro: 0% o 100% = colapso. Gana la más cercana a 50% en el día 15.</div>
+            <Link href="/codex" className="mt-2 block rounded-2xl border border-cyan-400/40 bg-cyan-400/10 p-2.5 text-center text-xs font-black text-cyan-200 transition hover:bg-cyan-400/20">
+              ❓ ¿CÓMO FUNCIONA CADA COSA? → GUÍA
+            </Link>
           </div>
         </div>
       </main>

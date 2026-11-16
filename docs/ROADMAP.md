@@ -17,6 +17,15 @@ Ataca la queja "tiro cartas sin saber qué pasa": preview solo-hover, resolució
 - [ ] **7. Sonido + juice** — pop al ganar recurso, golpe grave al perder, alarma en <20%.
 
 ## P2 — Querer volver (HECHO ✅ commit 28144ae)
+
+## Diversión infantil (GUARDADO — propuesto 2026-11-16, implementar por orden)
+Ideas de Minecraft/Pokémon/Outfoxed/Mario Kart/Fall Guys, todas interesantes según el jefe:
+- [ ] 🏠 Base visible: cada carta planta su edificio en tira bajo la ventana
+- [ ] 🎖️ Álbum de parches: 8 stickers coleccionables con persistencia
+- [ ] ✏️ Mi tripulación: nombres de colonia/astronautas + color de traje, Houston los nombra
+- [ ] 🪂 Red Houston: 1× por partida, +12 a barra que caiga a ≤10
+- [ ] 👥 Modo juntos hot-seat: 2-4 nombres, turno rotativo por día
+- [ ] 😹 Fracaso chistoso: animación y frase tonta al colapsar
 - [ ] **8. Medidor de equilibrio** — dial "⚖️ Equilibrio %" (cercanía a 50%) siempre visible; objetivo deja de ser abstracto.
 - [ ] **9. Estrellas por partida** (1-3) según equilibrio + días — meta para rejugar.
 - [ ] **10. Modo historia corto** — 3 misiones con guion en vez de solo endless 15 días.
