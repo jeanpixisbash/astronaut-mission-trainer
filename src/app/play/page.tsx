@@ -13,9 +13,10 @@ import {
   ALERTAS,
   BRIEFINGS,
   BRIEFING_DEFAULT,
+  EDIFICIO,
+  FRACASO_GRACIOSO,
   HOUSTON_CALMA,
-  HOUSTON_LOSE,
-  HOUSTON_WIN,
+  PARCHES,
   REACCION_ATAQUE,
   REACCION_EVENTO,
   RUTINAS,
@@ -25,7 +26,7 @@ import {
   type OpcionAlerta,
   type Rutina,
 } from "@/lib/historia";
-import { loadStars, marcarTutoVisto, saveStar, tutoVisto } from "@/lib/progress";
+import { loadStars, marcarTutoVisto, saveStar, tutoVisto, loadParches, ganarParche, loadTribu, saveTribu, loadJugadores, saveJugadores, TRIBU_DEFAULT, type Tribu } from "@/lib/progress";
 import { isMuted, setMuted, sfx } from "@/lib/sound";
 
 function shuffle<T>(arr: T[]): T[] {
@@ -134,6 +135,39 @@ export default function PlayPage() {
   const [rutinaDia, setRutinaDia] = useState<number | null>(null);
   const [alertaActiva, setAlertaActiva] = useState<Alerta | null>(null);
   const alertasRef = useRef<Record<number, string>>({});
+  // Diversión infantil: base visible, parches, tribu, red, refuerzos, modo juntos
+  const [base, setBase] = useState<string[]>([]);
+  const [parches, setParches] = useState<string[]>(() => (typeof window !== "undefined" ? loadParches() : []));
+  const [tribu, setTribu] = useState<Tribu>(() => (typeof window !== "undefined" ? loadTribu() : TRIBU_DEFAULT));
+  const [jugadores, setJugadores] = useState<string[]>(() => (typeof window !== "undefined" ? loadJugadores() : []));
+  const [redUsada, setRedUsada] = useState(false);
+  const redRef = useRef(false);
+  const [refuerzos, setRefuerzos] = useState(0);
+
+  const darParche = (id: string) => {
+    if (typeof window === "undefined") return;
+    if (loadParches().includes(id)) return;
+    const nombre = PARCHES.find((p) => p.id === id)?.nombre ?? id;
+    setParches(ganarParche(id));
+    setHoustonMsg(`📡 🎖️ ¡Parche desbloqueado: ${nombre}!`);
+    sfx.pop();
+  };
+
+  /** 🪂 Red Houston: 1× por partida, rescata lo que tocó 0 (el exceso 100% sí mata). */
+  const intentarRed = (failed: GameState): GameState => {
+    if (failed.gameOver && !failed.won && !redRef.current && (Object.values(failed.recursos) as number[]).some((v) => v <= 0)) {
+      const r = { ...failed.recursos };
+      (Object.keys(r) as (keyof Recursos)[]).forEach((k) => {
+        if (r[k] <= 0) r[k] = 12;
+      });
+      redRef.current = true;
+      setRedUsada(true);
+      setHoustonMsg("📡 ¡Te lancé mi paracaídas! ¡Era el único que tenía!");
+      sfx.pop();
+      return { ...failed, recursos: r, gameOver: false, causaDerrota: undefined, log: [...failed.log, "🪂 ¡Red Houston! +12 a lo que estaba en 0. ¡Solo había una!"] };
+    }
+    return failed;
+  };
 
   /** 2 sorpresas por partida (misiones de 6+ días): días al azar, fuera de eventos globales. */
   const programarAlertas = (maxDias: number): Record<number, string> => {
@@ -221,7 +255,8 @@ export default function PlayPage() {
     let impacto: Partial<Recursos> = { ...carta.impacto };
     let coste = carta.pa;
     let etiqueta = carta.nombre;
-    if (reforzar && state.pa >= carta.pa + 1) {
+    const usoRefuerzo = reforzar && state.pa >= carta.pa + 1;
+    if (usoRefuerzo) {
       const mejor = (Object.entries(impacto) as [keyof Recursos, number][]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])[0];
       if (mejor) {
         impacto = { ...impacto, [mejor[0]]: mejor[1] + 10 };
@@ -229,6 +264,12 @@ export default function PlayPage() {
         etiqueta += " ⚡";
       }
     }
+    if (usoRefuerzo) {
+      const n = refuerzos + 1;
+      setRefuerzos(n);
+      if (n >= 3) darParche("refuerzos");
+    }
+    setBase((b) => [...b, carta.id]);
 
     let next = aplicarCarta(state, impacto, coste, etiqueta, protocolo);
     pasos.push({ emoji: FAMILIA_ICON[carta.familia] ?? "◉", titulo: etiqueta, detalle: carta.explicacion, deltas: { ...impacto } });
@@ -279,16 +320,20 @@ export default function PlayPage() {
       const stars = estrellasPara(failed.won, equi);
       setEstrellasGanadas(stars);
       if (mision && stars > 0) setEstrellas(saveStar(mision.id, stars));
+      if (failed.won && mision?.id === "m0") darParche("graduado");
+      if (failed.won && mision?.id === "m3") darParche("veterano");
+      if (failed.won && equi >= 85) darParche("equilibrista");
       if (failed.won) sfx.win();
       else sfx.lose();
-      setHoustonMsg(failed.won ? HOUSTON_WIN : HOUSTON_LOSE);
+      const quien = mision ? `¡Misión cumplida, ${tribu.colonia}!` : "¡Misión cumplida!";
+      setHoustonMsg(failed.won ? `📡 ${quien} Houston aplaude. 👏` : `📡 Houston… ¿${tribu.colonia}, me copias?… Inténtalo de nuevo. 💔`);
       setState(failed);
       setMensaje(failed.causaDerrota ?? (failed.won ? "¡Victoria!" : "Colapso"));
       setRojoIdx((i) => (i + 1) % deckRojo.length);
       setResol(null);
     };
 
-    const check = verificarColapso(next);
+    const check = intentarRed(verificarColapso(next));
     if (check.gameOver) {
       playSequence(pasos, vistas, seq, () => finalizeColapso(check), ataque, check.won ? "gana" : "pierde");
       return;
@@ -308,7 +353,7 @@ export default function PlayPage() {
         deltas: { energia: -5, oxigeno: -5, comida: -5 },
       });
       vistas.push({ ...siguiente.recursos });
-      const check2 = verificarColapso(siguiente);
+      const check2 = intentarRed(verificarColapso(siguiente));
       if (check2.gameOver) {
         playSequence(pasos, vistas, seq, () => finalizeColapso(check2), ataque, "pierde");
         return;
@@ -317,13 +362,16 @@ export default function PlayPage() {
     }
 
     if (siguienteDia > check.maxDias) {
-      const final = verificarColapso({ ...siguiente, dia: check.maxDias });
+      const final = intentarRed(verificarColapso({ ...siguiente, dia: check.maxDias }));
       playSequence(pasos, vistas, seq, () => finalizeColapso(final), ataque, final.won ? "gana" : "pierde");
     } else {
       const go = { ...siguiente };
       playSequence(pasos, vistas, seq, () => {
         if (seqRef.current !== seq) return;
         setState(go);
+        if (eventoHoy?.id === "noche-lunar") darParche("noche");
+        if (eventoHoy?.id === "fulguracion-x") darParche("cazatormentas");
+        if (go.recursos.escudo >= 80) darParche("muralla");
         // Houston comenta el nuevo día
         const valsGo = Object.values(go.recursos) as number[];
         const minGo = Math.min(...valsGo);
@@ -419,7 +467,7 @@ export default function PlayPage() {
     const net = (Object.values(op.efecto) as number[]).reduce((a, v) => a + v, 0);
     if (net > 0) sfx.pop();
     else if (net < 0) sfx.hit();
-    const check = verificarColapso(ns);
+    const check = intentarRed(verificarColapso(ns));
     if (check.gameOver) {
       const equi = equilibrioDe(check.recursos);
       const stars = estrellasPara(check.won, equi);
@@ -427,13 +475,14 @@ export default function PlayPage() {
       if (mision && stars > 0) setEstrellas(saveStar(mision.id, stars));
       if (check.won) sfx.win();
       else sfx.lose();
-      setHoustonMsg(check.won ? HOUSTON_WIN : HOUSTON_LOSE);
+      setHoustonMsg(check.won ? `📡 ¡Misión cumplida, ${tribu.colonia}! Houston aplaude. 👏` : `📡 Houston… ¿${tribu.colonia}, me copias?… Inténtalo de nuevo. 💔`);
       setState(check);
       setMensaje(check.causaDerrota ?? "Colapso");
       return;
     }
     setState(check);
     setHoustonMsg(`📡 ¡Bien decidido! ${op.explicacion}`);
+    darParche("sangre");
   };
 
   const hacerRutina = (r: Rutina) => {
@@ -497,6 +546,10 @@ export default function PlayPage() {
     setBriefing(true);
     setHoustonMsg("📡 Houston en línea. ¡Buena suerte!");
     setRutinaDia(null);
+    setBase([]);
+    setRedUsada(false);
+    redRef.current = false;
+    setRefuerzos(0);
     doneRef.current = null;
   };
 
@@ -529,6 +582,10 @@ export default function PlayPage() {
     setBriefing(true);
     setHoustonMsg("📡 Houston en línea. ¡Buena suerte!");
     setRutinaDia(null);
+    setBase([]);
+    setRedUsada(false);
+    redRef.current = false;
+    setRefuerzos(0);
     doneRef.current = null;
   };
 
@@ -566,6 +623,8 @@ export default function PlayPage() {
       : "feliz";
   const pasoActual = resol && resol.i > 0 ? resol.pasos[resol.i - 1] : null;
   const selCarta = sel ? (mano.find((c) => `${c.id}-${handIdx}` === sel) ?? null) : null;
+  const chiste = FRACASO_GRACIOSO[(state.causaDerrota?.length ?? 0) % FRACASO_GRACIOSO.length];
+  const turnoDe = jugadores.length > 0 ? jugadores[(state.dia - 1) % jugadores.length] : null;
   const refuerzoMax = selCarta ? Math.max(0, ...(Object.values(selCarta.impacto) as number[])) : 0;
   const equi = equilibrioDe(vistaActual);
   const equiColor = equi >= 70 ? "text-emerald-300" : equi >= 40 ? "text-amber-300" : "text-red-300";
@@ -647,6 +706,105 @@ export default function PlayPage() {
                       </button>
                     );
                   })}
+                </div>
+                {/* mi tripulación + modo juntos */}
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <div className="text-xs font-black tracking-widest text-white/60">✏️ MI TRIPULACIÓN</div>
+                    <label className="mt-2 block text-xs font-bold text-white/70">
+                      Colonia
+                      <input
+                        value={tribu.colonia}
+                        onChange={(e) => {
+                          const t = { ...tribu, colonia: e.target.value.slice(0, 16) || "Aurora" };
+                          setTribu(t);
+                          saveTribu(t);
+                        }}
+                        className="mt-1 w-full rounded-lg border border-white/15 bg-black/40 px-2 py-1.5 text-sm text-white outline-none"
+                      />
+                    </label>
+                    <div className="mt-2 grid grid-cols-3 gap-1.5">
+                      {tribu.crew.map((n, i) => (
+                        <label key={i} className="block text-xs font-bold text-white/70">
+                          Astro {i + 1}
+                          <input
+                            value={n}
+                            onChange={(e) => {
+                              const crew = [...tribu.crew] as [string, string, string];
+                              crew[i] = e.target.value.slice(0, 10) || TRIBU_DEFAULT.crew[i];
+                              const t = { ...tribu, crew };
+                              setTribu(t);
+                              saveTribu(t);
+                            }}
+                            className="mt-1 w-full rounded-lg border border-white/15 bg-black/40 px-2 py-1.5 text-sm text-white outline-none"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs font-bold text-white/70">Traje:</span>
+                      {["#22d3ee", "#f472b6", "#a3e635", "#fbbf24"].map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => {
+                            const t = { ...tribu, color: c };
+                            setTribu(t);
+                            saveTribu(t);
+                            sfx.click();
+                          }}
+                          className={`size-6 rounded-full border-2 ${tribu.color === c ? "border-white" : "border-transparent"}`}
+                          style={{ background: c }}
+                          aria-label={`Traje ${c}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <div className="text-xs font-black tracking-widest text-white/60">👥 MODO JUNTOS (OPCIONAL)</div>
+                    <p className="mt-1 text-[11px] leading-4 text-white/55">Turnos por día, hot-seat. Ej: Effer, Luca</p>
+                    <input
+                      defaultValue={jugadores.join(", ")}
+                      onBlur={(e) => {
+                        const arr = e.target.value.split(",").map((s) => s.trim().slice(0, 10)).filter(Boolean).slice(0, 4);
+                        setJugadores(arr);
+                        saveJugadores(arr);
+                      }}
+                      placeholder="Nombres separados por coma"
+                      className="mt-2 w-full rounded-lg border border-white/15 bg-black/40 px-2 py-1.5 text-sm text-white outline-none placeholder:text-white/25"
+                    />
+                    {jugadores.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setJugadores([]);
+                          saveJugadores([]);
+                        }}
+                        className="mt-2 text-[11px] font-bold text-white/50 underline"
+                      >
+                        Quitar modo juntos ({jugadores.join(" · ")})
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {/* álbum de parches */}
+                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-xs font-black tracking-widest text-white/60">
+                    🎖️ MIS PARCHES ({parches.length}/{PARCHES.length})
+                  </div>
+                  <div className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-8">
+                    {PARCHES.map((p) => {
+                      const tiene = parches.includes(p.id);
+                      return (
+                        <div
+                          key={p.id}
+                          title={tiene ? `${p.nombre}: ${p.como}` : `🔒 ${p.nombre}: ${p.como}`}
+                          className={`rounded-xl border px-1 py-2 text-center ${tiene ? "border-amber-400 bg-amber-400/15" : "border-white/10 bg-black/30 opacity-45"}`}
+                        >
+                          <div className="text-2xl">{tiene ? p.emoji : "🔒"}</div>
+                          <div className="mt-0.5 text-[9px] font-black leading-tight">{p.nombre}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -768,10 +926,22 @@ export default function PlayPage() {
           <div className="min-w-0 flex-1">
             <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
 
+            {/* base visible: cada carta planta su edificio */}
+            {base.length > 0 && (
+              <div className="flex items-center gap-1 overflow-x-auto border-x-[10px] border-[#343b4a] bg-[#0b0e17] px-3 py-1.5">
+                <span className="shrink-0 text-[10px] font-black tracking-widest text-white/50">🏠 MI BASE</span>
+                {base.slice(-18).map((id, i) => (
+                  <span key={`${id}-${i}`} className="shrink-0 text-xl" title={id}>
+                    {EDIFICIO[id] ?? "🏕️"}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* feed Houston con astronauta */}
             {mision && (
               <div className="flex items-center gap-2 border-x-[10px] border-[#343b4a] bg-[#10141f] px-3 py-1.5">
-                <Astronauta mood={mood} size={44} />
+                <Astronauta mood={mood} size={44} color={tribu.color} />
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={houstonMsg}
@@ -798,7 +968,7 @@ export default function PlayPage() {
                 >
                   <div className="w-full max-w-md rounded-[24px] border-4 border-cyan-400 bg-[#0d1119] p-5 text-center">
                     <div className="flex justify-center">
-                      <Astronauta mood="feliz" size={88} />
+                      <Astronauta mood="feliz" size={88} color={tribu.color} />
                     </div>
                     <h2 className="mt-2 text-lg font-black">{(BRIEFINGS[mision.id] ?? BRIEFING_DEFAULT).titulo}</h2>
                     <div className="mt-3 space-y-2">
@@ -829,6 +999,16 @@ export default function PlayPage() {
                 <span className={`rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-black ${equiColor}`} title="Cercanía a 50% en las 4 barras">
                   ⚖️ {equi}%
                 </span>
+                {redUsada && (
+                  <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-black text-white/50" title="Houston ya te salvó una vez">
+                    🪂 RED USADA
+                  </span>
+                )}
+                {turnoDe && !state.gameOver && (
+                  <span className="rounded-full border border-cyan-400/40 bg-cyan-400/15 px-2.5 py-1 text-[11px] font-black text-cyan-200">
+                    👥 Turno de {turnoDe}
+                  </span>
+                )}
                 <button
                   onClick={() => setProtocolo((v) => !v)}
                   disabled={!puedeGuardarProtocolo || fase === "negociar"}
@@ -842,7 +1022,7 @@ export default function PlayPage() {
                 <div className="px-1 pb-1 text-[11px] font-bold text-white/55">🎯 {mision.nombre}: {mision.objetivo}</div>
               )}
 
-              <Crew recursos={vistaActual} />
+              <Crew recursos={vistaActual} nombres={tribu.crew} />
 
               {mision?.id === "m0" && !state.gameOver && (
                 <div className="mt-1.5 rounded-xl border border-white/15 bg-white/[0.05] px-3 py-2">
@@ -1053,9 +1233,10 @@ export default function PlayPage() {
               {state.gameOver && (
                 <div className={`mt-2 rounded-2xl border-2 p-4 text-white ${state.won ? "bg-emerald-500 border-emerald-600" : "bg-red-500 border-red-600"}`}>
                   <div className="flex items-center gap-3">
-                    <Astronauta mood={mood} size={64} />
+                    <Astronauta mood={mood} size={64} color={tribu.color} />
                     <div>
                       <div className="text-lg font-black">{state.won ? `🎉 ¡Sobreviviste ${state.maxDias} días!` : `💥 ${state.causaDerrota}`}</div>
+                      {!state.won && <div className="mt-1 text-sm font-bold opacity-90">{chiste}</div>}
                       {mision && <div className="text-xs font-bold opacity-80">{mision.emoji} {mision.nombre}</div>}
                     </div>
                   </div>

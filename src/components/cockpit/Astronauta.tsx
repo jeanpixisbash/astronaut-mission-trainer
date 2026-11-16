@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 export type Mood = "feliz" | "preocupado" | "triste" | "campeon";
 
 /** Houston con cuerpo: astronauta SVG que cambia la cara según el juego. */
-export default function Astronauta({ mood, size = 48 }: { mood: Mood; size?: number }) {
+export default function Astronauta({ mood, size = 48, color = "#f43f5e" }: { mood: Mood; size?: number; color?: string }) {
   return (
     <motion.div
       animate={{ y: [0, -4, 0] }}
@@ -16,7 +16,9 @@ export default function Astronauta({ mood, size = 48 }: { mood: Mood; size?: num
       <svg viewBox="0 0 100 100" className="h-full w-full drop-shadow-lg">
         {/* antena */}
         <line x1="72" y1="18" x2="80" y2="6" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" />
-        <circle cx="81" cy="5" r="4" fill={mood === "triste" ? "#64748b" : "#f43f5e"} />
+        <circle cx="81" cy="5" r="4" fill={mood === "triste" ? "#64748b" : color} />
+        {/* franja del traje */}
+        <rect x="28" y="90" width="44" height="7" rx="3.5" fill={color} opacity="0.9" />
         {/* orejas casco */}
         <rect x="4" y="42" width="10" height="18" rx="5" fill="#cbd5e1" />
         <rect x="86" y="42" width="10" height="18" rx="5" fill="#cbd5e1" />

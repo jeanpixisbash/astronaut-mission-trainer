@@ -150,3 +150,47 @@ export const RUTINAS: Rutina[] = [
 export function enCalma(r: Recursos): boolean {
   return (Object.values(r) as number[]).every((v) => v >= 25 && v <= 75);
 }
+
+/** Cada carta planta su edificio: la base visible crece (placer Minecraft). */
+export const EDIFICIO: Record<string, string> = {
+  "paneles-gigantes": "🔆",
+  fsp: "🏭",
+  "rtg-mmrtg": "🔋",
+  "apagado-modulos": "💤",
+  sabatier: "⚗️",
+  "reciclador-orina": "🚰",
+  "electrolisis-hielo": "🧊",
+  zeolita: "🌀",
+  moxie: "💨",
+  ared: "🚴",
+  hidroponico: "🥬",
+  espirulina: "🦠",
+  raciones: "📦",
+  "cosecha-intensiva": "🌾",
+  "muro-regolito": "🧱",
+  "ice-home": "🏠",
+  "tunel-lava": "🕳️",
+  sellado: "🩹",
+  whipple: "🛰️",
+  "refugio-tormenta": "⛺",
+};
+
+export type Parche = { id: string; nombre: string; emoji: string; como: string };
+
+export const PARCHES: Parche[] = [
+  { id: "graduado", nombre: "Graduado", emoji: "🎓", como: "Gana el Entrenamiento" },
+  { id: "noche", nombre: "Noctámbulo", emoji: "🌙", como: "Sobrevive la noche lunar" },
+  { id: "cazatormentas", nombre: "Cazatormentas", emoji: "☀️", como: "Sobrevive una fulguración X" },
+  { id: "muralla", nombre: "Muralla", emoji: "🧱", como: "Llega a 80 de escudo sin pasarte" },
+  { id: "refuerzos", nombre: "Con todo", emoji: "⚡", como: "Usa 3 refuerzos en una partida" },
+  { id: "sangre", nombre: "Sangre fría", emoji: "🧊", como: "Resuelve una alerta sin colapsar" },
+  { id: "equilibrista", nombre: "Equilibrista", emoji: "⚖️", como: "Gana con 85%+ de equilibrio" },
+  { id: "veterano", nombre: "Veterano", emoji: "🚀", como: "Gana la Misión completa" },
+];
+
+export const FRACASO_GRACIOSO = [
+  "La tripulación flota de cabeza… ¡pero con estilo! 🌀",
+  "Houston pide otro intento. Y un café. ☕",
+  "Los marcianos aplauden tu intento. 👽",
+  "Ni el rover se ríe… bueno, sí, un poco. 🤖",
+];
