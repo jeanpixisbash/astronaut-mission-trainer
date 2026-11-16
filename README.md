@@ -1,14 +1,14 @@
-# Sobrevive al Sol — Junior Astronaut Mission Trainer
+# Sobrevive al Sol: Junior Astronaut Mission Trainer
 
 Juego web educativo para **NASA Space Apps Challenge 2026**. El jugador dirige una colonia lunar o marciana y aprende, mediante cartas y decisiones, cómo los astronautas deben equilibrar energía, oxígeno, comida y protección contra la radiación.
 
-> **Cada decisión ayuda un sistema y sacrifica otro. No hay opciones perfectas: hay decisiones distintas.**
+> En el espacio, cada decisión tiene un costo.
 
 **Demo:** https://astronaut-mission-trainer-seven.vercel.app/play  
 **Codex NASA:** https://astronaut-mission-trainer-seven.vercel.app/codex  
 **Repositorio:** https://github.com/jeanpixisbash/astronaut-mission-trainer
 
-> No es un producto oficial de NASA ni representa especificaciones oficiales de una misión. Es un prototipo educativo basado en tecnologías, datos y recursos públicos de NASA.
+> Este es un prototipo educativo de un participante de Space Apps. NASA no lo respalda ni representa una misión oficial.
 
 ## Qué se puede hacer
 
@@ -53,42 +53,42 @@ La colonia tiene cuatro sistemas críticos, todos entre 0% y 100%:
 
 La misión Entrenamiento no usa todas las reglas de golpe:
 
-1. **Día 1 — Tu decisión:** carta sin ataque ni desgaste nocturno.
-2. **Día 2 — Una amenaza:** aparece un ataque rojo suave.
-3. **Día 3 — El espacio responde:** aparece un evento global y se completa el ciclo.
+1. **Día 1: Tu decisión:** carta sin ataque ni desgaste nocturno.
+2. **Día 2: Una amenaza:** aparece un ataque rojo suave.
+3. **Día 3: El espacio responde:** aparece un evento global y se completa el ciclo.
 
-Houston explica cada etapa y el jugador avanza la resolución manualmente con el botón **Siguiente**, sin textos que desaparezcan demasiado rápido.
+Houston explica cada etapa. El jugador avanza con **Siguiente** cuando termina de leer.
 
 ## Datos y recursos NASA utilizados
 
-Las cartas usan hechos y tecnologías reales como base. Los modificadores del juego son abstracciones didácticas para niños de 7 a 12 años.
+Las cartas parten de tecnologías y datos reales. Sus modificadores son simplificaciones diseñadas para que niños de 7 a 12 años entiendan los intercambios.
 
-- [DONKI — Space Weather Database](https://ccmc.gsfc.nasa.gov/tools/DONKI/) — fulguraciones, tormentas solares y riesgo de radiación.
-- [NASA Open Science Data Repository](https://osdr.nasa.gov/bio/repo/) — biología y salud espacial.
-- [RadLab — NASA OSDR](https://visualization.osdr.nasa.gov/radlab/gui/data-api/) — dosimetría de radiación.
-- [NASA Mars Exploration](https://mars.nasa.gov/) — polvo marciano, rovers y ambiente de Marte.
-- [Mars Trek](https://trek.nasa.gov/mars/) — terreno e imágenes de Marte.
-- [NASA Moon](https://www.nasa.gov/moon) — noche lunar, hielo, regolito y tubos de lava.
-- [MOXIE](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) — producción de oxígeno en Marte.
-- [Fission Surface Power](https://www.nasa.gov/exploration-systems-development-mission-directorate/fission-surface-power) — energía nuclear para la Luna.
-- [ECLSS](https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss) — soporte vital y reciclaje.
-- [Astronaut Exercise / ARED](https://www.nasa.gov/missions/station/iss-research/astronaut-exercise) — ejercicio y pérdida ósea/muscular.
-- [Veggie](https://www.nasa.gov/missions/station/veggie-plant-growth-system-activated-on-international-space-station) — cultivo de plantas en la ISS.
-- [Advanced Plant Habitat](https://science.nasa.gov/mission/advanced-plant-habitat) — investigación de crecimiento vegetal.
-- [Space Radiation Challenge](https://www.nasa.gov/wp-content/uploads/2017/04/radiationchallenge.pdf) — radiación espacial y refugios.
-- [Whipple Shields — NASA JSC](https://hvit.jsc.nasa.gov/shield-development/) — protección contra micrometeoritos.
-- [RadWorks Storm Shelter — NASA NTRS](https://ntrs.nasa.gov/citations/20170002287) — refugios ante eventos solares.
-- [CO₂ Removal and Sabatier — NASA NTRS](https://ntrs.nasa.gov/citations/20190030370) — eliminación de CO₂ y recuperación de agua.
+- [DONKI: Space Weather Database](https://ccmc.gsfc.nasa.gov/tools/DONKI/): fulguraciones, tormentas solares y riesgo de radiación.
+- [NASA Open Science Data Repository](https://osdr.nasa.gov/bio/repo/): biología y salud espacial.
+- [RadLab: NASA OSDR](https://visualization.osdr.nasa.gov/radlab/gui/data-api/): dosimetría de radiación.
+- [NASA Mars Exploration](https://mars.nasa.gov/): polvo marciano, rovers y ambiente de Marte.
+- [Mars Trek](https://trek.nasa.gov/mars/): terreno e imágenes de Marte.
+- [NASA Moon](https://www.nasa.gov/moon): noche lunar, hielo, regolito y tubos de lava.
+- [MOXIE](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/): producción de oxígeno en Marte.
+- [Fission Surface Power](https://www.nasa.gov/exploration-systems-development-mission-directorate/fission-surface-power): energía nuclear para la Luna.
+- [ECLSS](https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss): soporte vital y reciclaje.
+- [Astronaut Exercise / ARED](https://www.nasa.gov/missions/station/iss-research/astronaut-exercise): ejercicio y pérdida ósea/muscular.
+- [Veggie](https://www.nasa.gov/missions/station/veggie-plant-growth-system-activated-on-international-space-station): cultivo de plantas en la ISS.
+- [Advanced Plant Habitat](https://science.nasa.gov/mission/advanced-plant-habitat): investigación de crecimiento vegetal.
+- [Space Radiation Challenge](https://www.nasa.gov/wp-content/uploads/2017/04/radiationchallenge.pdf): radiación espacial y refugios.
+- [Whipple Shields: NASA JSC](https://hvit.jsc.nasa.gov/shield-development/): protección contra micrometeoritos.
+- [RadWorks Storm Shelter: NASA NTRS](https://ntrs.nasa.gov/citations/20170002287): refugios ante eventos solares.
+- [CO₂ Removal and Sabatier: NASA NTRS](https://ntrs.nasa.gov/citations/20190030370): eliminación de CO₂ y recuperación de agua.
 
 ## Otros recursos y herramientas
 
-- [NASA Space Apps Challenge — reto](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/)
+- [NASA Space Apps Challenge: reto](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/)
 - [NASA Space Apps Resources](https://www.spaceappschallenge.org/resources/)
-- [Next.js](https://nextjs.org/) — framework web.
-- [React](https://react.dev/) — interfaz interactiva.
-- [Motion](https://motion.dev/) — animaciones de cartas, cockpit y astronauta.
-- [Vercel](https://vercel.com/) — deployment.
-- [Mesmerizing Galaxy — Kevin MacLeod](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN2300011) — música ambient CC BY 4.0.
+- [Next.js](https://nextjs.org/): framework web.
+- [React](https://react.dev/): interfaz interactiva.
+- [Motion](https://motion.dev/): animaciones de cartas, cockpit y astronauta.
+- [Vercel](https://vercel.com/): deployment.
+- [Mesmerizing Galaxy: Kevin MacLeod](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN2300011): música ambient CC BY 4.0.
 
 ## Ejecutar localmente
 
