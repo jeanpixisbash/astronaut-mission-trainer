@@ -1,6 +1,9 @@
+"use client";
 import Link from "next/link";
+import { LangToggle, useLang } from "@/lib/i18n";
 
 export default function Home() {
+  const { t } = useLang();
   return (
     <div className="min-h-dvh bg-[#080c1a] text-zinc-100 selection:bg-violet-500/30">
       {/* Header */}
@@ -17,19 +20,20 @@ export default function Home() {
           </div>
           <nav className="flex items-center gap-3 text-sm">
             <a href="#how" className="hidden sm:block text-white/70 hover:text-white">
-              How it works
+              {t("l_nav_how")}
             </a>
             <a href="#data" className="hidden sm:block text-white/70 hover:text-white">
-              NASA Data
+              {t("l_nav_data")}
             </a>
             <Link href="/codex" className="hidden sm:block text-white/70 hover:text-white">
               📖 Codex
             </Link>
+            <LangToggle dark />
             <Link
               href="/play"
               className="rounded-full bg-white text-black px-4 py-1.5 font-medium hover:bg-zinc-100 transition"
             >
-              Play now →
+              {t("l_nav_play")}
             </Link>
           </nav>
         </div>
@@ -43,43 +47,37 @@ export default function Home() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/80">
               <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-              Beginner · Games · Space Exploration
+              {t("l_badge")}
               <span className="hidden sm:inline text-white/40">•</span>
-              <span className="hidden sm:inline">Ages 7–12</span>
+              <span className="hidden sm:inline">{t("l_ages")}</span>
             </div>
             <h1 className="mt-4 text-4xl sm:text-5xl font-extrabold leading-[0.95] tracking-tight">
-              Run a <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">lunar or Martian</span>{" "}
-              outpost.
-              <br />
-              Every watt has a cost.
+              {t("l_h1a")}{" "}
+              <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">{t("l_h1b")}</span>{" "}
+              {t("l_h1c")}
             </h1>
-            <p className="mt-4 text-[15px] leading-6 text-white/70 max-w-xl">
-              You are in charge of life support, radiation shielding, power, food and comms. A choice that saves power
-              today might cost oxygen tomorrow. Learn the real trade-offs NASA planners face — through play, not a quiz.
-            </p>
+            <p className="mt-4 text-[15px] leading-6 text-white/70 max-w-xl">{t("l_sub")}</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/play"
                 className="rounded-full bg-white text-black px-6 py-3 font-semibold hover:bg-zinc-100 transition shadow-lg shadow-white/10"
               >
-                ▶ Start Mission
+                {t("l_cta1")}
               </Link>
               <a
                 href="#how"
                 className="rounded-full border border-white/15 bg-white/5 px-6 py-3 font-medium hover:bg-white/10 transition"
               >
-                How it works
+                {t("l_cta2")}
               </a>
             </div>
-            <p className="mt-3 text-xs text-white/50">
-              No download · No login · Browser playable · Built with real NASA open data
-            </p>
+            <p className="mt-3 text-xs text-white/50">{t("l_note")}</p>
 
             <div className="mt-8 grid grid-cols-3 gap-3 max-w-lg">
               {[
-                { k: "Power", v: "Budget it", d: "Split 100W between life support, shielding, greenhouse & science" },
-                { k: "O₂ / Food", v: "Keep alive", d: "Astronauts need 0.84 kg O₂ & 2500 kcal / day — for real" },
-                { k: "Radiation", v: "Shield or risk", d: "Real DONKI flares & ISS RadLab dose data" },
+                { k: t("l_p1k"), v: t("l_p1v"), d: t("l_p1d") },
+                { k: t("l_p2k"), v: t("l_p2v"), d: t("l_p2d") },
+                { k: t("l_p3k"), v: t("l_p3v"), d: t("l_p3d") },
               ].map((c) => (
                 <div key={c.k} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                   <div className="text-[11px] tracking-widest text-white/50 uppercase">{c.k}</div>
@@ -94,9 +92,9 @@ export default function Home() {
           <div className="relative">
             <div className="rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 sm:p-5 shadow-2xl">
               <div className="flex items-center justify-between text-xs text-white/60">
-                <span className="rounded-full bg-white/10 px-2.5 py-1">◉ Outpost — Mars · Day 3</span>
+                <span className="rounded-full bg-white/10 px-2.5 py-1">{t("l_card_outpost")}</span>
                 <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 px-2 py-1">
-                  ● Crew OK
+                  {t("l_card_crew")}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
@@ -116,22 +114,18 @@ export default function Home() {
                 ))}
               </div>
               <div className="mt-4 rounded-2xl bg-amber-400/15 border border-amber-400/30 p-3">
-                <div className="text-sm font-semibold">☀️ Solar Flare Incoming!</div>
-                <div className="text-xs text-white/70">
-                  DONKI detected an X8.7 flare. Reinforce shielding now or save power?
-                </div>
+                <div className="text-sm font-semibold">{t("l_card_flare_t")}</div>
+                <div className="text-xs text-white/70">{t("l_card_flare_d")}</div>
                 <div className="mt-2 flex gap-2">
                   <span className="flex-1 rounded-full bg-white text-black text-xs font-semibold py-1.5 text-center">
-                    Reinforce (+30 Shield, −25 Power)
+                    {t("l_card_b1")}
                   </span>
                   <span className="flex-1 rounded-full border border-white/20 bg-white/5 text-xs font-medium py-1.5 text-center">
-                    Save power (Risky)
+                    {t("l_card_b2")}
                   </span>
                 </div>
               </div>
-              <p className="mt-3 text-[11px] text-white/45 text-center">
-                Grounds gameplay in real NASA open data — not invented stats.
-              </p>
+              <p className="mt-3 text-[11px] text-white/45 text-center">{t("l_card_ground")}</p>
             </div>
             <div className="absolute -z-10 -right-6 -bottom-6 size-48 rounded-full bg-violet-600/20 blur-3xl" />
           </div>
@@ -140,28 +134,13 @@ export default function Home() {
 
       {/* How it works */}
       <section id="how" className="mx-auto max-w-6xl px-5 py-10">
-        <h2 className="text-xl font-semibold">How the training works</h2>
-        <p className="text-sm text-white/60 mt-1 max-w-2xl">
-          Turn-based survival across story missions. No safe choice — every card helps one system and hurts another, just like real
-          mission planning.
-        </p>
+        <h2 className="text-xl font-semibold">{t("l_how_t")}</h2>
+        <p className="text-sm text-white/60 mt-1 max-w-2xl">{t("l_how_sub")}</p>
         <div className="mt-6 grid sm:grid-cols-3 gap-4">
           {[
-            {
-              n: "01",
-              t: "Play a card",
-              d: "You get 3 actions per day. Flip any card to learn what it does, then play it. Big sliders of consequence, plain language, instant feedback.",
-            },
-            {
-              n: "02",
-              t: "Face the red deck",
-              d: "Solar flares, dust storms, micrometeorites and comm blackouts strike after you play. Read the forecast and shield up — or hide.",
-            },
-            {
-              n: "03",
-              t: "Watch consequences",
-              d: "Every step resolves in front of you with real numbers. Keep all 4 bars away from 0% and 100% — both extremes kill.",
-            },
+            { n: "01", t: t("l_s1t"), d: t("l_s1d") },
+            { n: "02", t: t("l_s2t"), d: t("l_s2d") },
+            { n: "03", t: t("l_s3t"), d: t("l_s3d") },
           ].map((s) => (
             <div key={s.n} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <div className="text-xs text-white/40">{s.n}</div>
@@ -175,17 +154,14 @@ export default function Home() {
       {/* Data */}
       <section id="data" className="mx-auto max-w-6xl px-5 pb-10">
         <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-5 sm:p-6">
-          <h3 className="font-semibold">Grounded in real NASA open data</h3>
-          <p className="text-sm text-white/60 mt-1">
-            We embed curated real datasets and attribute them inside the game — honest about what is live vs curated, as
-            the challenge asks.
-          </p>
+          <h3 className="font-semibold">{t("l_data_t")}</h3>
+          <p className="text-sm text-white/60 mt-1">{t("l_data_sub")}</p>
           <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
             {[
-              { name: "DONKI", desc: "Solar flares & CMEs — radiation risk", url: "https://ccmc.gsfc.nasa.gov/tools/DONKI/" },
-              { name: "RadLab OSDR", desc: "ISS radiation dosimetry — real dose rates", url: "https://visualization.osdr.nasa.gov/radlab/" },
-              { name: "OSDR Bio", desc: "Astronaut health — bone, muscle, immune", url: "https://osdr.nasa.gov/bio/repo/" },
-              { name: "Mars Trek", desc: "Mars terrain & imagery", url: "https://trek.nasa.gov/mars/" },
+              { name: "DONKI", desc: t("l_d1d"), url: "https://ccmc.gsfc.nasa.gov/tools/DONKI/" },
+              { name: "RadLab OSDR", desc: t("l_d2d"), url: "https://visualization.osdr.nasa.gov/radlab/" },
+              { name: "OSDR Bio", desc: t("l_d3d"), url: "https://osdr.nasa.gov/bio/repo/" },
+              { name: "Mars Trek", desc: t("l_d4d"), url: "https://trek.nasa.gov/mars/" },
             ].map((r) => (
               <a
                 key={r.name}
@@ -196,14 +172,11 @@ export default function Home() {
               >
                 <div className="font-medium">{r.name}</div>
                 <div className="text-xs text-white/60">{r.desc}</div>
-                <div className="text-xs text-violet-300 mt-1 underline underline-offset-4">open →</div>
+                <div className="text-xs text-violet-300 mt-1 underline underline-offset-4">{t("l_open")}</div>
               </a>
             ))}
           </div>
-          <p className="mt-3 text-xs text-white/40">
-            Tip: live DONKI/Mars APIs work with a free api.nasa.gov key. For demo stability we ship curated snapshots
-            and label them as such.
-          </p>
+          <p className="mt-3 text-xs text-white/40">{t("l_tip")}</p>
         </div>
       </section>
 
@@ -211,19 +184,19 @@ export default function Home() {
       <div className="mx-auto max-w-6xl px-5 pb-14">
         <div className="rounded-[24px] bg-white text-black p-5 sm:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <div className="font-bold text-lg">Ready to command the outpost?</div>
-            <div className="text-sm text-black/60">4 missions. 4 systems. No free choices. Ages 7–12 (fun for grown-ups too).</div>
+            <div className="font-bold text-lg">{t("l_cta_t")}</div>
+            <div className="text-sm text-black/60">{t("l_cta_sub")}</div>
           </div>
-          <Link href="/play" className="rounded-full bg-black text-white px-6 py-3 font-semibold hover:bg-zinc-800 transition">
-            Launch Mission →
-          </Link>
-          <Link href="/codex" className="rounded-full border border-black/15 px-6 py-3 font-semibold hover:bg-black/5 transition">
-            📖 Codex NASA
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/play" className="rounded-full bg-black text-white px-6 py-3 font-semibold hover:bg-zinc-800 transition">
+              {t("l_nav_play")}
+            </Link>
+            <Link href="/codex" className="rounded-full border border-black/15 px-6 py-3 font-semibold hover:bg-black/5 transition">
+              📖 Codex NASA
+            </Link>
+          </div>
         </div>
-        <p className="text-center text-xs text-white/30 mt-4">
-          Built for NASA Space Apps 2026 · Junior Astronaut Mission Trainer · Not affiliated with NASA — uses public open data.
-        </p>
+        <p className="text-center text-xs text-white/30 mt-4">{t("l_footer")}</p>
       </div>
     </div>
   );

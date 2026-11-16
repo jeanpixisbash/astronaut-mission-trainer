@@ -4,13 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { CartaSupervivencia } from "@/lib/cardsCatalog";
 import type { Recursos } from "@/lib/gameEngine";
 import { sfx } from "@/lib/sound";
-
-export const META: Record<keyof Recursos, { icon: string; label: string }> = {
-  energia: { icon: "⚡", label: "ENERGÍA" },
-  oxigeno: { icon: "💧", label: "OXÍGENO" },
-  comida: { icon: "🌱", label: "COMIDA" },
-  escudo: { icon: "🛡️", label: "ESCUDO" },
-};
+import { RES_ICON, RES_LABEL, fmt, useLang } from "@/lib/i18n";
+import { cardText, fuenteNombre } from "@/lib/i18n-data";
 
 const FAMILIA_STYLE: Record<string, { bg: string; icon: string }> = {
   energia: { bg: "#f59e0b", icon: "⚡" },
@@ -20,9 +15,10 @@ const FAMILIA_STYLE: Record<string, { bg: string; icon: string }> = {
 };
 
 export function ResourceStrip({ recursos, oculto, preview, flash }: { recursos: Recursos; oculto: boolean; preview?: Recursos | null; flash?: Partial<Recursos> | null }) {
+  const { lang } = useLang();
   return (
     <div className="flex items-center justify-center gap-4 rounded-xl bg-[#10141f] px-4 py-2 sm:gap-8">
-      {(Object.keys(META) as (keyof Recursos)[]).map((k) => {
+      {(Object.keys(RES_LABEL[lang]) as (keyof Recursos)[]).map((k) => {
         const v = recursos[k];
         const pv = preview?.[k];
         const delta = pv !== undefined && !oculto ? pv - v : 0;
@@ -30,9 +26,9 @@ export function ResourceStrip({ recursos, oculto, preview, flash }: { recursos: 
         const f = flash?.[k] ?? 0;
         return (
           <div key={k} className="relative text-center">
-            <div className="text-xs font-black tracking-widest text-white/55">{META[k].label}</div>
+            <div className="text-xs font-black tracking-widest text-white/55">{RES_LABEL[lang][k]}</div>
             <div className={`text-lg font-black tabular-nums ${oculto ? "text-white/40" : danger ? "text-red-400" : "text-white"}`}>
-              {META[k].icon} {oculto ? "?" : v}
+              {RES_ICON[k]} {oculto ? "?" : v}
               {!oculto && delta !== 0 && (
                 <span className={`ml-1 text-xs ${delta > 0 ? "text-emerald-400" : "text-red-400"}`}>
                   {delta > 0 ? `▲${delta}` : `▼${delta}`}
@@ -66,12 +62,18 @@ export function ResourceStrip({ recursos, oculto, preview, flash }: { recursos: 
 }
 
 export function Crew({ recursos, nombres }: { recursos: Recursos; nombres?: [string, string, string] }) {
+  const { t } = useLang();
   const peor = Math.min(...(Object.values(recursos) as number[]));
-  const mood = peor >= 45 ? { cara: "😊", texto: "feliz", color: "text-emerald-300" } : peor >= 28 ? { cara: "😐", texto: "cansada", color: "text-amber-300" } : { cara: "😵", texto: "en peligro", color: "text-red-300" };
+  const mood =
+    peor >= 45
+      ? { cara: "😊", texto: t("feliz"), color: "text-emerald-300" }
+      : peor >= 28
+        ? { cara: "😐", texto: t("cansada"), color: "text-amber-300" }
+        : { cara: "😵", texto: t("peligro"), color: "text-red-300" };
   const lista = nombres ?? ["Ada", "Yuri", "Mae"];
   return (
     <div className="flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5">
-      <span className="text-xs font-black tracking-widest text-white/50">TRIPULACIÓN</span>
+      <span className="text-xs font-black tracking-widest text-white/50">{t("tripulacion")}</span>
       {lista.map((n) => (
         <span key={n} className="flex items-center gap-1" title={`${n}: ${mood.texto}`}>
           <span className="grid size-7 place-items-center rounded-full border border-white/20 bg-black/40 text-lg">{mood.cara}</span>
@@ -84,26 +86,28 @@ export function Crew({ recursos, nombres }: { recursos: Recursos; nombres?: [str
 }
 
 export function DetalleCarta({ c }: { c: CartaSupervivencia }) {
+  const { lang, t } = useLang();
+  const tc = cardText(lang, c);
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl border-2 border-cyan-400 bg-[#f7f1dd] p-3 text-stone-900 shadow-lg"
     >
-      <div className="text-xs font-black tracking-widest text-stone-500">🔍 ¿QUÉ HACE ESTA CARTA?</div>
-      <div className="mt-1 text-sm font-medium leading-5">{c.explicacion}</div>
+      <div className="text-xs font-black tracking-widest text-stone-500">{t("detalle_t")}</div>
+      <div className="mt-1 text-sm font-medium leading-5">{tc.explicacion}</div>
       <div className="mt-2 flex flex-wrap gap-1">
         {Object.entries(c.impacto).map(([k, v]) => (
           <span key={k} className={`rounded-full px-2 py-0.5 text-xs font-black text-white ${v! > 0 ? "bg-emerald-600" : "bg-red-600"}`}>
-            {v! > 0 ? `+${v}` : v} {META[k as keyof Recursos].icon} {META[k as keyof Recursos].label}
+            {v! > 0 ? `+${v}` : v} {RES_ICON[k as keyof Recursos]} {RES_LABEL[lang][k as keyof Recursos]}
           </span>
         ))}
-        <span className="rounded-full bg-stone-900 px-2 py-0.5 text-xs font-black text-white">Cuesta {c.pa} PA</span>
+        <span className="rounded-full bg-stone-900 px-2 py-0.5 text-xs font-black text-white">{fmt(t("cuesta_pa"), { n: c.pa })}</span>
       </div>
       <div className="mt-2 rounded-xl bg-stone-900/5 p-2 text-xs leading-4 text-stone-700">
-        🛰️ <b>Sello NASA:</b> {c.fundamento}{" "}
+        🛰️ <b>{t("sello")}</b> {tc.fundamento}{" "}
         <a href={c.fuente.url} target="_blank" rel="noreferrer" className="font-bold text-cyan-700 underline">
-          Fuente: {c.fuente.nombre} →
+          {t("fuente")} {fuenteNombre(lang, c.fuente.nombre)} →
         </a>
       </div>
     </motion.div>
@@ -130,6 +134,8 @@ export function Hand({
   onHover: (impacto: Partial<Recursos> | null) => void;
 }) {
   const [giradas, setGiradas] = useState<{ hand: number; map: Record<string, boolean> }>({ hand: handIdx, map: {} });
+  const { lang, t } = useLang();
+  const ap = lang === "en" ? "AP" : "PA";
   const mapaGiradas = giradas.hand === handIdx ? giradas.map : {};
   const girar = (key: string) => {
     sfx.flip();
@@ -174,41 +180,41 @@ export function Hand({
                     {fam.icon}
                   </span>
                   <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-black text-white ${noPA ? "bg-red-500" : "bg-zinc-900"}`}>
-                    {c.pa} PA
+                    {c.pa} {ap}
                   </span>
                   <span className="mx-auto mt-1 grid size-10 place-items-center rounded-full border-2 border-stone-400 bg-white text-xl" aria-hidden>
                     {c.familia === "energia" ? "⚡" : c.familia === "soporte" ? "💧" : c.familia === "biodomo" ? "🌱" : "🛡️"}
                   </span>
-                  <span className="mt-2 text-center text-[13px] font-black leading-tight sm:text-sm">{c.nombre}</span>
+                  <span className="mt-2 text-center text-[13px] font-black leading-tight sm:text-sm">{cardText(lang, c).nombre}</span>
                   <span className="mt-1 flex flex-wrap justify-center gap-1">
                     {Object.entries(c.impacto).map(([k, v]) => (
                       <span key={k} className={`rounded-full px-1.5 py-0.5 text-xs font-black ${v! > 0 ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
-                        {v! > 0 ? `+${v}` : v}{META[k as keyof Recursos].icon}
+                        {v! > 0 ? `+${v}` : v}{RES_ICON[k as keyof Recursos]}
                       </span>
                     ))}
                   </span>
                   <span className="mt-auto line-clamp-2 rounded-lg bg-stone-900/5 px-1.5 py-1 text-center text-xs leading-tight text-stone-600">
-                    <b>NASA:</b> {c.fundamento}
+                    <b>NASA:</b> {cardText(lang, c).fundamento}
                   </span>
                   <span className="rounded-full py-1 text-center text-xs font-black text-white" style={{ background: fam.bg }}>
-                    {noPA ? `FALTAN ${c.pa - pa} PA` : disabled ? "···" : selected ? "▶ TOCÁ DE NUEVO" : `▶ JUGAR`}
+                    {noPA ? fmt(t("falta"), { a: c.pa - pa, b: pa }) : disabled ? t("puntos") : selected ? t("tocad") : t("jugar")}
                   </span>
                 </div>
                 <div className="absolute inset-0 overflow-y-auto rounded-2xl border-2 border-cyan-500 bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:p-3">
-                  <div className="text-xs font-black tracking-widest text-stone-500">❓ ¿QUÉ ES?</div>
-                  <p className="mt-0.5 text-xs leading-5">{c.explicacion}</p>
-                  <div className="mt-1.5 text-xs font-black tracking-widest text-stone-500">🎯 ¿POR QUÉ JUGARLA?</div>
+                  <div className="text-xs font-black tracking-widest text-stone-500">{t("que_es")}</div>
+                  <p className="mt-0.5 text-xs leading-5">{cardText(lang, c).explicacion}</p>
+                  <div className="mt-1.5 text-xs font-black tracking-widest text-stone-500">{t("porque")}</div>
                   <ul className="mt-0.5 space-y-0.5 text-xs leading-5">
                     {pros.map(([k, v]) => (
-                      <li key={k}>✅ Sube {META[k].label} {v}. Úsala cuando esté en rojo.</li>
+                      <li key={k}>✅ {fmt(t("usala"), { r: RES_LABEL[lang][k], v })}</li>
                     ))}
                     {contras.map(([k, v]) => (
-                      <li key={k}>⚠️ Ojo: baja {META[k].label} {v}.</li>
+                      <li key={k}>⚠️ {fmt(t("ojo"), { r: RES_LABEL[lang][k], v })}</li>
                     ))}
-                    <li>⚡ Cuesta {c.pa} {c.pa === 1 ? "acción" : "acciones"}.</li>
+                    <li>⚡ {c.pa === 1 ? fmt(t("cuesta1"), { n: c.pa }) : fmt(t("cuestaN"), { n: c.pa })}</li>
                   </ul>
                   <div className="mt-1.5 rounded-lg bg-stone-900/5 p-1.5 text-xs leading-4 text-stone-700">
-                    🛰️ <b>Dato NASA:</b> {c.fundamento}{" "}
+                    🛰️ <b>{t("dato")}</b> {cardText(lang, c).fundamento}{" "}
                     <a
                       href={c.fuente.url}
                       target="_blank"
@@ -216,7 +222,7 @@ export function Hand({
                       onClick={(e) => e.stopPropagation()}
                       className="font-bold text-cyan-700 underline"
                     >
-                      {c.fuente.nombre} →
+                      {t("fuente")} {fuenteNombre(lang, c.fuente.nombre)} →
                     </a>
                   </div>
                 </div>
@@ -231,7 +237,7 @@ export function Hand({
                 onMouseLeave={() => onHover(null)}
                 className={`absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-full border-2 border-white px-2.5 py-1 text-xs font-black whitespace-nowrap text-white shadow-lg active:scale-90 ${girada ? "bg-zinc-700" : "bg-cyan-600"} ${resaltarAyuda && !girada ? "animate-pulse ring-2 ring-amber-300" : ""}`}
               >
-                {girada ? "↩ VOLVER" : "❓ ¿QUÉ HACE?"}
+                {girada ? t("volver") : t("saber")}
               </button>
             </motion.div>
           );
