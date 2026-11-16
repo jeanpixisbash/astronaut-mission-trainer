@@ -101,23 +101,36 @@ function SideConsole({ side }: { side: "left" | "right" }) {
 
 type PanelId = "timeline" | "bitacora" | "mision";
 
-function PanelLateral({ titulo, abierto, onClose, children }: { panel: PanelId; titulo: string; abierto: boolean; onClose: () => void; children: React.ReactNode }) {
+// Config reversible: para cambiar orden/etiquetas edita PANELES.
+// Para agregar un panel: añade entrada aquí + su bloque en el drawer.
+const PANELES: { id: PanelId; titulo: string; icono: string }[] = [
+  { id: "timeline", titulo: "TIMELINE", icono: "🌌" },
+  { id: "bitacora", titulo: "BITÁCORA", icono: "📋" },
+  { id: "mision", titulo: "MISIÓN", icono: "🎯" },
+];
+
+function RailDerecho({ activo, onToggle }: { activo: PanelId | null; onToggle: (p: PanelId) => void }) {
   return (
-    <div className={`shrink-0 transition-all ${abierto ? "w-64 sm:w-72" : "w-10"}`}>
-      <button
-        onClick={onClose}
-        className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.05] px-2 py-2 text-xs font-black tracking-widest text-white/70"
-      >
-        {abierto ? (
-          <>
-            <span>{titulo}</span>
-            <span aria-hidden>✕</span>
-          </>
-        ) : (
-          <span className="mx-auto [writing-mode:vertical-rl]">{titulo}</span>
-        )}
-      </button>
-      {abierto && <div className="mt-2 max-h-[420px] overflow-y-auto rounded-xl border border-white/10 bg-white/[0.04] p-2.5">{children}</div>}
+    <div className="flex shrink-0 flex-col gap-2" role="tablist" aria-label="Paneles">
+      {PANELES.map((p) => {
+        const on = activo === p.id;
+        return (
+          <button
+            key={p.id}
+            role="tab"
+            aria-selected={on}
+            onClick={() => onToggle(p.id)}
+            className={`flex flex-col items-center gap-1 rounded-xl border-2 px-2 py-3 transition active:scale-95 ${
+              on ? "border-white bg-white text-black shadow-lg" : "border-white/15 bg-white/[0.05] text-white/70 hover:bg-white/10"
+            }`}
+          >
+            <span className="text-lg leading-none" aria-hidden>
+              {p.icono}
+            </span>
+            <span className="text-[10px] font-black tracking-widest [writing-mode:vertical-rl]">{p.titulo}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -984,28 +997,6 @@ export default function PlayPage() {
         {/* cockpit — consola horizontal: todo visible en una sola pantalla */}
         <div className="mt-2 flex flex-1 min-h-0 items-stretch justify-center gap-2 overflow-hidden">
           <SideConsole side="left" />
-          <PanelLateral
-            panel="timeline"
-            titulo="🌌 TIMELINE"
-            abierto={panelAbierto === "timeline"}
-            onClose={() => setPanelAbierto(panelAbierto === "timeline" ? null : "timeline")}
-          >
-            <div className="space-y-1.5">
-              {[3, 6, 9, 12, 15].map((d, i) => {
-                const ev = timeline[i];
-                const isHoy = state.dia === d;
-                const fuera = d > state.maxDias;
-                return (
-                  <div key={d} className={`rounded-xl border px-2.5 py-2 ${fuera ? "opacity-30 bg-white/5 border-white/10" : isHoy ? "bg-amber-400 text-black border-amber-500" : state.dia > d ? "opacity-50 bg-white/5 border-white/10" : "bg-black/30 border-white/10"}`}>
-                    <div className="text-sm font-black">DÍA {d}</div>
-                    <div className="text-sm font-bold leading-tight">{fuera ? "—" : (ev?.nombre ?? "—")}</div>
-                    {!fuera && <div className="text-xs leading-tight opacity-70 line-clamp-2">{ev?.datoReal}</div>}
-                  </div>
-                );
-              })}
-              {eventoHoy && <div className="rounded-xl bg-amber-400 px-3 py-2 text-sm font-bold text-black">🌌 Hoy: {eventoHoy.nombre} — {eventoHoy.datoReal}</div>}
-            </div>
-          </PanelLateral>
           <div className="flex min-w-0 flex-1 flex-col min-h-0">
             <div className="flex-1 shrink-0" style={{ height: "24dvh", minHeight: 150, maxHeight: 220 }}>
               <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
@@ -1366,46 +1357,80 @@ export default function PlayPage() {
               )}
             </div>
           </div>
-          <PanelLateral
-            panel="bitacora"
-            titulo="📋 BITÁCORA"
-            abierto={panelAbierto === "bitacora"}
-            onClose={() => setPanelAbierto(panelAbierto === "bitacora" ? null : "bitacora")}
-          >
-            <div className="max-h-[340px] overflow-auto rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-sm leading-6">
-              {state.log.map((l, i) => (
-                <div key={i} className={i === state.log.length - 1 ? "font-bold text-white" : "text-white/60"}>{l}</div>
-              ))}
-            </div>
-            {mensaje && <div className="mt-1 text-sm font-bold text-amber-300">{mensaje}</div>}
-            <div className="mt-1 text-xs leading-4 text-white/40">Regla de Oro: 0% o 100% = colapso. Gana la más cercana a 50%.</div>
-            <Link href="/codex" className="mt-2 block rounded-2xl border border-cyan-400/40 bg-cyan-400/10 p-2.5 text-center text-xs font-black text-cyan-200 transition hover:bg-cyan-400/20">
-              ❓ ¿CÓMO FUNCIONA CADA COSA? → GUÍA
-            </Link>
-          </PanelLateral>
-          <PanelLateral
-            panel="mision"
-            titulo="🎯 MISIÓN"
-            abierto={panelAbierto === "mision"}
-            onClose={() => setPanelAbierto(panelAbierto === "mision" ? null : "mision")}
-          >
-            {mision ? (
-              <div>
-                <div className="text-sm font-black">
-                  {mision.emoji} {mision.nombre}
-                </div>
-                <p className="mt-1 text-xs leading-4 text-white/70">{mision.objetivo}</p>
-                <p className="mt-1 text-xs leading-4 text-white/55">{mision.descripcion}</p>
-                <div className="mt-2 border-t border-white/10 pt-2 text-xs text-white/60">
-                  DÍA {state.dia}/{state.maxDias} · PA {state.pa}/3 · ⚖️ {equi}%
-                </div>
-                {turnoDe && <div className="mt-1 text-xs font-black text-cyan-200">👥 Guion: {turnoDe}</div>}
-              </div>
-            ) : (
-              <p className="text-sm text-white/60">Elige una misión para ver su detalle.</p>
-            )}
-          </PanelLateral>
           <SideConsole side="right" />
+          <RailDerecho activo={panelAbierto} onToggle={(p) => setPanelAbierto(panelAbierto === p ? null : p)} />
+          {/* drawer: contenido del panel activo, apilado a la derecha y reversible vía PANELES */}
+          <AnimatePresence>
+            {panelAbierto && (
+              <motion.aside
+                key={panelAbierto}
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 24 }}
+                transition={{ duration: 0.2 }}
+                className="fixed bottom-0 right-0 top-0 z-40 w-72 overflow-y-auto border-l border-white/10 bg-[#0b0e17]/95 p-3 backdrop-blur lg:static lg:z-auto lg:w-64 lg:shrink-0 lg:border-l-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-0"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-black tracking-widest text-white/60">
+                    {PANELES.find((p) => p.id === panelAbierto)?.icono} {PANELES.find((p) => p.id === panelAbierto)?.titulo}
+                  </span>
+                  <button onClick={() => setPanelAbierto(null)} className="rounded-full border border-white/15 px-2 py-0.5 text-xs font-black text-white/70" aria-label="Cerrar panel">
+                    ✕
+                  </button>
+                </div>
+                {panelAbierto === "timeline" && (
+                  <div className="space-y-1.5">
+                    {[3, 6, 9, 12, 15].map((d, i) => {
+                      const ev = timeline[i];
+                      const isHoy = state.dia === d;
+                      const fuera = d > state.maxDias;
+                      return (
+                        <div key={d} className={`rounded-xl border px-2.5 py-2 ${fuera ? "opacity-30 bg-white/5 border-white/10" : isHoy ? "bg-amber-400 text-black border-amber-500" : state.dia > d ? "opacity-50 bg-white/5 border-white/10" : "bg-black/30 border-white/10"}`}>
+                          <div className="text-sm font-black">DÍA {d}</div>
+                          <div className="text-sm font-bold leading-tight">{fuera ? "—" : (ev?.nombre ?? "—")}</div>
+                          {!fuera && <div className="text-xs leading-tight opacity-70 line-clamp-2">{ev?.datoReal}</div>}
+                        </div>
+                      );
+                    })}
+                    {eventoHoy && <div className="rounded-xl bg-amber-400 px-3 py-2 text-sm font-bold text-black">🌌 Hoy: {eventoHoy.nombre} — {eventoHoy.datoReal}</div>}
+                  </div>
+                )}
+                {panelAbierto === "bitacora" && (
+                  <div>
+                    <div className="max-h-[340px] overflow-auto rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-sm leading-6">
+                      {state.log.map((l, i) => (
+                        <div key={i} className={i === state.log.length - 1 ? "font-bold text-white" : "text-white/60"}>{l}</div>
+                      ))}
+                    </div>
+                    {mensaje && <div className="mt-1 text-sm font-bold text-amber-300">{mensaje}</div>}
+                    <div className="mt-1 text-xs leading-4 text-white/40">Regla de Oro: 0% o 100% = colapso. Gana la más cercana a 50%.</div>
+                    <Link href="/codex" className="mt-2 block rounded-2xl border border-cyan-400/40 bg-cyan-400/10 p-2.5 text-center text-xs font-black text-cyan-200 transition hover:bg-cyan-400/20">
+                      ❓ ¿CÓMO FUNCIONA CADA COSA? → GUÍA
+                    </Link>
+                  </div>
+                )}
+                {panelAbierto === "mision" && (
+                  <div>
+                    {mision ? (
+                      <div>
+                        <div className="text-sm font-black">
+                          {mision.emoji} {mision.nombre}
+                        </div>
+                        <p className="mt-1 text-xs leading-4 text-white/70">{mision.objetivo}</p>
+                        <p className="mt-1 text-xs leading-4 text-white/55">{mision.descripcion}</p>
+                        <div className="mt-2 border-t border-white/10 pt-2 text-xs text-white/60">
+                          DÍA {state.dia}/{state.maxDias} · PA {state.pa}/3 · ⚖️ {equi}%
+                        </div>
+                        {turnoDe && <div className="mt-1 text-xs font-black text-cyan-200">👥 Guion: {turnoDe}</div>}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-white/60">Elige una misión para ver su detalle.</p>
+                    )}
+                  </div>
+                )}
+              </motion.aside>
+            )}
+          </AnimatePresence>
         </div>
       </main>
     </div>
