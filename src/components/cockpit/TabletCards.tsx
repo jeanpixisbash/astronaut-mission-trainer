@@ -214,7 +214,7 @@ export function Hand({
                     <li>⚡ {c.pa === 1 ? fmt(t("cuesta1"), { n: c.pa }) : fmt(t("cuestaN"), { n: c.pa })}</li>
                   </ul>
                   <div className="mt-1.5 rounded-lg bg-stone-900/5 p-1.5 text-xs leading-4 text-stone-700">
-                    🛰️ <b>{t("dato")}</b> {cardText(lang, c).fundamento}{" "}
+                    <b>{t("dato")}</b> {cardText(lang, c).fundamento}{" "}
                     <a
                       href={c.fuente.url}
                       target="_blank"

@@ -143,7 +143,7 @@ const UI = {
     en: "Golden rule: 0% or 100% = collapse. Closest to 50% wins.",
   },
   guia: { es: "¿CÓMO FUNCIONA CADA COSA? → GUÍA", en: "HOW DOES EACH THING WORK? → GUIDE" },
-  hoy: { es: "🌌 Hoy:", en: "🌌 Today:" },
+  hoy: { es: "Hoy:", en: "Today:" },
   timeline: { es: "TIMELINE", en: "TIMELINE" },
   mision_p: { es: "MISIÓN", en: "MISSION" },
   mision_detalle: { es: "Elige una misión para ver su detalle.", en: "Pick a mission to see details." },
