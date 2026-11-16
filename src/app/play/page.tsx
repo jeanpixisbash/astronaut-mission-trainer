@@ -99,6 +99,29 @@ function SideConsole({ side }: { side: "left" | "right" }) {
   );
 }
 
+type PanelId = "timeline" | "bitacora" | "mision";
+
+function PanelLateral({ titulo, abierto, onClose, children }: { panel: PanelId; titulo: string; abierto: boolean; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className={`shrink-0 transition-all ${abierto ? "w-64 sm:w-72" : "w-10"}`}>
+      <button
+        onClick={onClose}
+        className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.05] px-2 py-2 text-xs font-black tracking-widest text-white/70"
+      >
+        {abierto ? (
+          <>
+            <span>{titulo}</span>
+            <span aria-hidden>✕</span>
+          </>
+        ) : (
+          <span className="mx-auto [writing-mode:vertical-rl]">{titulo}</span>
+        )}
+      </button>
+      {abierto && <div className="mt-2 max-h-[420px] overflow-y-auto rounded-xl border border-white/10 bg-white/[0.04] p-2.5">{children}</div>}
+    </div>
+  );
+}
+
 export default function PlayPage() {
   const [state, setState] = useState<GameState>(() => crearEstadoInicial());
   const [deckSup, setDeckSup] = useState<CartaSupervivencia[]>(() => [...SUPERVIVENCIA]);
@@ -139,6 +162,7 @@ export default function PlayPage() {
   const [base, setBase] = useState<string[]>([]);
   const [parches, setParches] = useState<string[]>(() => (typeof window !== "undefined" ? loadParches() : []));
   const [tribu, setTribu] = useState<Tribu>(() => (typeof window !== "undefined" ? loadTribu() : TRIBU_DEFAULT));
+  const [panelAbierto, setPanelAbierto] = useState<"timeline" | "bitacora" | "mision" | null>(null);
   const [jugadores, setJugadores] = useState<string[]>(() => (typeof window !== "undefined" ? loadJugadores() : []));
   const [redUsada, setRedUsada] = useState(false);
   const redRef = useRef(false);
@@ -703,7 +727,7 @@ export default function PlayPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-3 pb-8 sm:px-4">
+      <main className="mx-auto w-full max-w-6xl px-3 pb-8 sm:px-4 [font-size:15px]">
         {/* selector de misión */}
         <AnimatePresence>
           {mision === null && (
@@ -730,8 +754,8 @@ export default function PlayPage() {
                         <div className="text-3xl">{desbloqueada ? m.emoji : "🔒"}</div>
                         <div className="mt-1 font-black">{m.nombre}</div>
                         <div className="text-xs font-bold opacity-70">{m.dias} días</div>
-                        <div className="mt-1 text-[11px] leading-tight opacity-80">{m.descripcion}</div>
-                        <div className="mt-1 text-[11px] leading-tight opacity-80">{m.objetivo}</div>
+                        <div className="mt-1 text-xs leading-tight opacity-80">{m.descripcion}</div>
+                        <div className="mt-1 text-xs leading-tight opacity-80">{m.objetivo}</div>
                         <div className="mt-2 text-sm tracking-widest">
                           {[0, 1, 2].map((s) => (
                             <span key={s} className={s < ms ? "text-amber-500" : "text-zinc-300"}>★</span>
@@ -795,7 +819,7 @@ export default function PlayPage() {
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                     <div className="text-xs font-black tracking-widest text-white/60">👥 MODO JUNTOS (OPCIONAL)</div>
-                    <p className="mt-1 text-[11px] leading-4 text-white/55">Turnos por día, hot-seat. Uno juega cada día.</p>
+                    <p className="mt-1 text-xs leading-4 text-white/55">Turnos por día, hot-seat. Uno juega cada día.</p>
                     <input
                       defaultValue={jugadores.join(", ")}
                       onBlur={(e) => {
@@ -812,7 +836,7 @@ export default function PlayPage() {
                           setJugadores([]);
                           saveJugadores([]);
                         }}
-                        className="mt-2 text-[11px] font-bold text-white/50 underline"
+                        className="mt-2 text-xs font-bold text-white/50 underline"
                       >
                         Quitar modo juntos ({jugadores.join(" · ")})
                       </button>
@@ -880,7 +904,7 @@ export default function PlayPage() {
                   if (entradas.length === 0) return null;
                   return (
                     <div className="mt-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
-                      <div className="text-[11px] font-black tracking-widest text-white/55">📊 TOTAL DEL DÍA</div>
+                      <div className="text-xs font-black tracking-widest text-white/55">📊 TOTAL DEL DÍA</div>
                       <div className="mt-1 flex flex-wrap justify-center gap-1.5">
                         {entradas.map(([k, v]) => (
                           <span key={k} className={`rounded-full px-2.5 py-1 text-sm font-black text-white ${v > 0 ? "bg-emerald-500" : "bg-red-500"}`}>
@@ -921,7 +945,7 @@ export default function PlayPage() {
                 <p className="mt-2 rounded-xl bg-white/5 px-3 py-2 text-sm leading-5 text-white/85">
                   📡 {alertaActiva.historia}
                 </p>
-                <div className="mt-2 text-[11px] font-black tracking-widest text-white/55">
+                <div className="mt-2 text-xs font-black tracking-widest text-white/55">
                   HOUSTON TE EXPLICA: NO HAY MALAS, SOLO DISTINTAS
                 </div>
                 <div className="mt-2 space-y-2 text-left">
@@ -948,22 +972,44 @@ export default function PlayPage() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[11px] text-white/40">Lee tranquilo, la emergencia te espera</p>
+                <p className="mt-2 text-xs text-white/40">Lee tranquilo, la emergencia te espera</p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* cockpit */}
-        <div className="mt-3 flex items-stretch justify-center gap-0">
+        {/* cockpit — layout consola: ventana grande + paneles laterales */}
+        <div className="mt-3 flex items-stretch justify-center gap-2">
           <SideConsole side="left" />
+          <PanelLateral
+            panel="timeline"
+            titulo="🌌 TIMELINE"
+            abierto={panelAbierto === "timeline"}
+            onClose={() => setPanelAbierto(panelAbierto === "timeline" ? null : "timeline")}
+          >
+            <div className="space-y-1.5">
+              {[3, 6, 9, 12, 15].map((d, i) => {
+                const ev = timeline[i];
+                const isHoy = state.dia === d;
+                const fuera = d > state.maxDias;
+                return (
+                  <div key={d} className={`rounded-xl border px-2.5 py-2 ${fuera ? "opacity-30 bg-white/5 border-white/10" : isHoy ? "bg-amber-400 text-black border-amber-500" : state.dia > d ? "opacity-50 bg-white/5 border-white/10" : "bg-black/30 border-white/10"}`}>
+                    <div className="text-sm font-black">DÍA {d}</div>
+                    <div className="text-sm font-bold leading-tight">{fuera ? "—" : (ev?.nombre ?? "—")}</div>
+                    {!fuera && <div className="text-xs leading-tight opacity-70 line-clamp-2">{ev?.datoReal}</div>}
+                  </div>
+                );
+              })}
+              {eventoHoy && <div className="rounded-xl bg-amber-400 px-3 py-2 text-sm font-bold text-black">🌌 Hoy: {eventoHoy.nombre} — {eventoHoy.datoReal}</div>}
+            </div>
+          </PanelLateral>
           <div className="min-w-0 flex-1">
             <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
 
             {/* base visible: cada carta planta su edificio */}
             {base.length > 0 && (
               <div className="flex items-center gap-1 overflow-x-auto border-x-[10px] border-[#343b4a] bg-[#0b0e17] px-3 py-1.5">
-                <span className="shrink-0 text-[10px] font-black tracking-widest text-white/50">🏠 MI BASE</span>
+                <span className="shrink-0 text-xs font-black tracking-widest text-white/50">🏠 MI BASE</span>
                 {base.slice(-18).map((id, i) => (
                   <span key={`${id}-${i}`} className="shrink-0 text-xl" title={id}>
                     {EDIFICIO[id] ?? "🏕️"}
@@ -1027,40 +1073,40 @@ export default function PlayPage() {
             {/* tablet */}
             <div className="rounded-b-[26px] border-[10px] border-t-0 border-[#343b4a] bg-[#0d1119] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.6)] sm:p-3">
               <div className="flex items-center justify-between gap-2 px-1 pb-2">
-                <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${state.gameOver ? (state.won ? "bg-emerald-500 border-emerald-600 text-white" : "bg-red-500 border-red-600 text-white") : "border-white/15 bg-white/5 text-white/80"}`}>
+                <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${state.gameOver ? (state.won ? "bg-emerald-500 border-emerald-600 text-white" : "bg-red-500 border-red-600 text-white") : "border-white/15 bg-white/5 text-white/80"}`}>
                   {state.gameOver ? (state.won ? "✅ ESTABLE" : `💥 ${state.causaDerrota}`) : resol ? `⏳ ${resol.i >= resol.pasos.length ? "…" : `${resol.pasos[Math.min(resol.i, resol.pasos.length - 1)].emoji} ${resol.pasos[Math.min(resol.i, resol.pasos.length - 1)].titulo}`} (${Math.min(resol.i + 1, resol.pasos.length)}/${resol.pasos.length})` : `● ${fase === "negociar" ? `NEGOCIANDO ${segundos}s` : "ELIGE 1 CARTA"}`}
                 </span>
-                <span className={`rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-black ${equiColor}`} title="Cercanía a 50% en las 4 barras">
+                <span className={`rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-black ${equiColor}`} title="Cercanía a 50% en las 4 barras">
                   ⚖️ {equi}%
                 </span>
                 {redUsada && (
-                  <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-black text-white/50" title="Houston ya te salvó una vez">
+                  <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-black text-white/50" title="Houston ya te salvó una vez">
                     🪂 RED USADA
                   </span>
                 )}
                 {turnoDe && !state.gameOver && (
-                  <span className="rounded-full border border-cyan-400/40 bg-cyan-400/15 px-2.5 py-1 text-[11px] font-black text-cyan-200">
+                  <span className="rounded-full border border-cyan-400/40 bg-cyan-400/15 px-2.5 py-1 text-xs font-black text-cyan-200">
                     👥 Turno de {turnoDe}
                   </span>
                 )}
                 <button
                   onClick={() => setProtocolo((v) => !v)}
                   disabled={!puedeGuardarProtocolo || fase === "negociar"}
-                  className={`rounded-full px-3 py-1 text-[11px] font-black ${protocolo ? "bg-violet-600 text-white" : "bg-white/10 text-white/80"} disabled:opacity-40`}
+                  className={`rounded-full px-3 py-1 text-xs font-black ${protocolo ? "bg-violet-600 text-white" : "bg-white/10 text-white/80"} disabled:opacity-40`}
                   title="Guardas 1 acción sin gastar: todo el daño que recibas este turno se parte a la mitad"
                 >
                   {protocoloBloqueado ? "🔒 ¡A CUBIERTO! (DÍA 3)" : protocolo ? "🛡️ ¡A CUBIERTO! ON" : "🛡️ ¡A CUBIERTO! (½ daño)"}
                 </button>
               </div>
               {mision && !state.gameOver && (
-                <div className="px-1 pb-1 text-[11px] font-bold text-white/55">🎯 {mision.nombre}: {mision.objetivo}</div>
+                <div className="px-1 pb-1 text-xs font-bold text-white/55">🎯 {mision.nombre}: {mision.objetivo}</div>
               )}
 
               <Crew recursos={vistaActual} nombres={tribu.crew} />
 
               {mision?.id === "m0" && !state.gameOver && (
                 <div className="mt-1.5 rounded-xl border border-white/15 bg-white/[0.05] px-3 py-2">
-                  <div className="text-[10px] font-black tracking-widest text-white/50">🎓 LISTA DE ENTRENAMIENTO</div>
+                  <div className="text-xs font-black tracking-widest text-white/50">🎓 LISTA DE ENTRENAMIENTO</div>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold">
                     <span className={state.dia > 1 ? "text-emerald-300" : "text-white/60"}>{state.dia > 1 ? "✅" : "⭕"} Juega una carta</span>
                     <span className={state.dia > 2 ? "text-emerald-300" : "text-white/60"}>{state.dia > 2 ? "✅" : "⭕"} Sobrevive al ataque rojo</span>
@@ -1132,7 +1178,7 @@ export default function PlayPage() {
                 preview={resol ? null : preview}
                 flash={resol && resol.i > 0 ? resol.pasos[resol.i - 1].deltas : null}
               />
-              {oculto && <div className="pt-1 text-center text-[11px] font-bold text-indigo-300">👁️ Sin telemetría este turno — los % vuelven el día {(state.ocultarHastaDia ?? state.dia) + 1}</div>}
+              {oculto && <div className="pt-1 text-center text-xs font-bold text-indigo-300">👁️ Sin telemetría este turno — los % vuelven el día {(state.ocultarHastaDia ?? state.dia) + 1}</div>}
 
               {!state.gameOver && !resol && fase === "planificar" && state.dia >= 2 && (
                 <div className="mt-2 rounded-2xl border border-red-400/50 bg-red-500/15 px-3 py-2 text-xs">
@@ -1148,7 +1194,7 @@ export default function PlayPage() {
 
               {!state.gameOver && !resol && fase === "planificar" && rutinaDia !== state.dia && enCalma(state.recursos) && (
                 <div className="mt-2 rounded-2xl border border-emerald-400/40 bg-emerald-400/10 p-2.5">
-                  <div className="text-[11px] font-black tracking-widest text-emerald-300">📋 RUTINA GRATIS (1 POR DÍA)</div>
+                  <div className="text-xs font-black tracking-widest text-emerald-300">📋 RUTINA GRATIS (1 POR DÍA)</div>
                   <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                     {RUTINAS.map((r) => (
                       <button
@@ -1158,8 +1204,8 @@ export default function PlayPage() {
                         className="rounded-xl border border-emerald-400/30 bg-black/30 px-2 py-1.5 text-left transition hover:bg-black/50 active:scale-[0.97]"
                       >
                         <div className="text-base leading-none">{r.emoji}</div>
-                        <div className="mt-0.5 text-[11px] font-black leading-tight">{r.nombre}</div>
-                        <div className="text-[11px] font-bold text-emerald-300">
+                        <div className="mt-0.5 text-xs font-black leading-tight">{r.nombre}</div>
+                        <div className="text-xs font-bold text-emerald-300">
                           {Object.entries(r.efecto).map(([k, v]) => `+${v}${META[k as keyof Recursos].icon}`).join(" ")}
                         </div>
                       </button>
@@ -1184,10 +1230,10 @@ export default function PlayPage() {
                   >
                     {resol.i < resol.pasos.length ? `SIGUIENTE → (${resol.i + 1}/${resol.pasos.length})` : "¡VER RESULTADO! 🎬"}
                   </button>
-                  <p className="pt-1 text-center text-[11px] text-white/50">Lee tranquilo, el juego te espera</p>
+                  <p className="pt-1 text-center text-xs text-white/50">Lee tranquilo, el juego te espera</p>
                 </div>
               )}
-              <p className="px-1 pt-2 text-center text-[11px] leading-4 text-white/50">
+              <p className="px-1 pt-2 text-center text-xs leading-4 text-white/50">
                 {needConfirm ? "👆 Toca para ver · de nuevo para jugar · " : ""}
                 ❓ ¿QUÉ HACE? te explica cada carta · ⚡ ACCIONES ●●●: jugar gasta, vuelven cada día
               </p>
@@ -1316,42 +1362,46 @@ export default function PlayPage() {
               )}
             </div>
           </div>
-          <SideConsole side="right" />
-        </div>
-
-        {/* debajo: timeline + bitácora */}
-        <div className="mt-3 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-            <div className="text-xs font-black tracking-widest">LÍNEA DE TIEMPO — eventos cada 3 días</div>
-            <div className="mt-2 flex gap-2 overflow-x-auto">
-              {[3, 6, 9, 12, 15].map((d, i) => {
-                const ev = timeline[i];
-                const isHoy = state.dia === d;
-                const fuera = d > state.maxDias;
-                return (
-                  <div key={d} className={`min-w-[140px] shrink-0 rounded-xl border px-2.5 py-2 ${fuera ? "opacity-30 bg-white/5 border-white/10" : isHoy ? "bg-amber-400 text-black border-amber-500" : state.dia > d ? "opacity-50 bg-white/5 border-white/10" : "bg-black/30 border-white/10"}`}>
-                    <div className="text-xs font-black">DÍA {d}</div>
-                    <div className="text-xs font-bold leading-tight">{fuera ? "—" : (ev?.nombre ?? "—")}</div>
-                    {!fuera && <div className="text-[11px] leading-tight opacity-70 line-clamp-2">{ev?.datoReal}</div>}
-                  </div>
-                );
-              })}
-            </div>
-            {eventoHoy && <div className="mt-2 rounded-xl bg-amber-400 px-3 py-2 text-sm font-bold text-black">🌌 Hoy: {eventoHoy.nombre} — {eventoHoy.datoReal}</div>}
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-            <h3 className="text-sm font-black">📋 Bitácora</h3>
-            <div className="mt-2 max-h-[180px] overflow-auto rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-xs leading-5">
+          <PanelLateral
+            panel="bitacora"
+            titulo="📋 BITÁCORA"
+            abierto={panelAbierto === "bitacora"}
+            onClose={() => setPanelAbierto(panelAbierto === "bitacora" ? null : "bitacora")}
+          >
+            <div className="max-h-[340px] overflow-auto rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-sm leading-6">
               {state.log.map((l, i) => (
                 <div key={i} className={i === state.log.length - 1 ? "font-bold text-white" : "text-white/60"}>{l}</div>
               ))}
             </div>
-            {mensaje && <div className="mt-1 text-xs font-bold text-amber-300">{mensaje}</div>}
-            <div className="mt-1 text-[11px] text-white/40">Regla de Oro: 0% o 100% = colapso. Gana la más cercana a 50% en el día 15.</div>
+            {mensaje && <div className="mt-1 text-sm font-bold text-amber-300">{mensaje}</div>}
+            <div className="mt-1 text-xs leading-4 text-white/40">Regla de Oro: 0% o 100% = colapso. Gana la más cercana a 50%.</div>
             <Link href="/codex" className="mt-2 block rounded-2xl border border-cyan-400/40 bg-cyan-400/10 p-2.5 text-center text-xs font-black text-cyan-200 transition hover:bg-cyan-400/20">
               ❓ ¿CÓMO FUNCIONA CADA COSA? → GUÍA
             </Link>
-          </div>
+          </PanelLateral>
+          <PanelLateral
+            panel="mision"
+            titulo="🎯 MISIÓN"
+            abierto={panelAbierto === "mision"}
+            onClose={() => setPanelAbierto(panelAbierto === "mision" ? null : "mision")}
+          >
+            {mision ? (
+              <div>
+                <div className="text-sm font-black">
+                  {mision.emoji} {mision.nombre}
+                </div>
+                <p className="mt-1 text-xs leading-4 text-white/70">{mision.objetivo}</p>
+                <p className="mt-1 text-xs leading-4 text-white/55">{mision.descripcion}</p>
+                <div className="mt-2 border-t border-white/10 pt-2 text-xs text-white/60">
+                  DÍA {state.dia}/{state.maxDias} · PA {state.pa}/3 · ⚖️ {equi}%
+                </div>
+                {turnoDe && <div className="mt-1 text-xs font-black text-cyan-200">👥 Guion: {turnoDe}</div>}
+              </div>
+            ) : (
+              <p className="text-sm text-white/60">Elige una misión para ver su detalle.</p>
+            )}
+          </PanelLateral>
+          <SideConsole side="right" />
         </div>
       </main>
     </div>

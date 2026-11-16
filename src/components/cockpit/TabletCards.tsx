@@ -29,7 +29,7 @@ export function ResourceStrip({ recursos, oculto, preview, flash }: { recursos: 
         const f = flash?.[k] ?? 0;
         return (
           <div key={k} className="relative text-center">
-            <div className="text-[10px] font-black tracking-widest text-white/55">{META[k].label}</div>
+            <div className="text-xs font-black tracking-widest text-white/55">{META[k].label}</div>
             <div className={`text-lg font-black tabular-nums ${oculto ? "text-white/40" : danger ? "text-red-400" : "text-white"}`}>
               {META[k].icon} {oculto ? "?" : v}
               {!oculto && delta !== 0 && (
@@ -70,14 +70,14 @@ export function Crew({ recursos, nombres }: { recursos: Recursos; nombres?: [str
   const lista = nombres ?? ["Ada", "Yuri", "Mae"];
   return (
     <div className="flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5">
-      <span className="text-[10px] font-black tracking-widest text-white/50">TRIPULACIÓN</span>
+      <span className="text-xs font-black tracking-widest text-white/50">TRIPULACIÓN</span>
       {lista.map((n) => (
         <span key={n} className="flex items-center gap-1" title={`${n}: ${mood.texto}`}>
           <span className="grid size-7 place-items-center rounded-full border border-white/20 bg-black/40 text-lg">{mood.cara}</span>
-          <span className="hidden text-[11px] font-bold text-white/60 sm:inline">{n}</span>
+          <span className="hidden text-xs font-bold text-white/60 sm:inline">{n}</span>
         </span>
       ))}
-      <span className={`text-[11px] font-black ${mood.color}`}>{mood.texto}</span>
+      <span className={`text-xs font-black ${mood.color}`}>{mood.texto}</span>
     </div>
   );
 }
@@ -89,7 +89,7 @@ export function DetalleCarta({ c }: { c: CartaSupervivencia }) {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl border-2 border-cyan-400 bg-[#f7f1dd] p-3 text-stone-900 shadow-lg"
     >
-      <div className="text-[11px] font-black tracking-widest text-stone-500">🔍 ¿QUÉ HACE ESTA CARTA?</div>
+      <div className="text-xs font-black tracking-widest text-stone-500">🔍 ¿QUÉ HACE ESTA CARTA?</div>
       <div className="mt-1 text-sm font-medium leading-5">{c.explicacion}</div>
       <div className="mt-2 flex flex-wrap gap-1">
         {Object.entries(c.impacto).map(([k, v]) => (
@@ -99,7 +99,7 @@ export function DetalleCarta({ c }: { c: CartaSupervivencia }) {
         ))}
         <span className="rounded-full bg-stone-900 px-2 py-0.5 text-xs font-black text-white">Cuesta {c.pa} PA</span>
       </div>
-      <div className="mt-2 rounded-xl bg-stone-900/5 p-2 text-[11px] leading-4 text-stone-700">
+      <div className="mt-2 rounded-xl bg-stone-900/5 p-2 text-xs leading-4 text-stone-700">
         🛰️ <b>Sello NASA:</b> {c.fundamento}{" "}
         <a href={c.fuente.url} target="_blank" rel="noreferrer" className="font-bold text-cyan-700 underline">
           Fuente: {c.fuente.nombre} →
@@ -172,7 +172,7 @@ export function Hand({
                   <span className="absolute left-2 top-2 grid size-6 place-items-center rounded-full border border-stone-400 bg-white/70 text-xs" aria-hidden>
                     {fam.icon}
                   </span>
-                  <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-black text-white ${noPA ? "bg-red-500" : "bg-zinc-900"}`}>
+                  <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-black text-white ${noPA ? "bg-red-500" : "bg-zinc-900"}`}>
                     {c.pa} PA
                   </span>
                   <span className="mx-auto mt-5 grid size-12 place-items-center rounded-full border-2 border-stone-400 bg-white text-2xl" aria-hidden>
@@ -181,22 +181,22 @@ export function Hand({
                   <span className="mt-2 text-center text-[13px] font-black leading-tight sm:text-sm">{c.nombre}</span>
                   <span className="mt-1 flex flex-wrap justify-center gap-1">
                     {Object.entries(c.impacto).map(([k, v]) => (
-                      <span key={k} className={`rounded-full px-1.5 py-0.5 text-[11px] font-black ${v! > 0 ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+                      <span key={k} className={`rounded-full px-1.5 py-0.5 text-xs font-black ${v! > 0 ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
                         {v! > 0 ? `+${v}` : v}{META[k as keyof Recursos].icon}
                       </span>
                     ))}
                   </span>
-                  <span className="mt-auto line-clamp-2 rounded-lg bg-stone-900/5 px-1.5 py-1 text-center text-[10px] leading-tight text-stone-600">
+                  <span className="mt-auto line-clamp-2 rounded-lg bg-stone-900/5 px-1.5 py-1 text-center text-xs leading-tight text-stone-600">
                     <b>NASA:</b> {c.fundamento}
                   </span>
-                  <span className="rounded-full py-1 text-center text-[11px] font-black text-white" style={{ background: fam.bg }}>
+                  <span className="rounded-full py-1 text-center text-xs font-black text-white" style={{ background: fam.bg }}>
                     {noPA ? `FALTAN ${c.pa - pa} PA` : disabled ? "···" : selected ? "▶ TOCÁ DE NUEVO" : `▶ JUGAR`}
                   </span>
                 </div>
                 <div className="absolute inset-0 overflow-y-auto rounded-2xl border-2 border-cyan-500 bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:p-3">
-                  <div className="text-[10px] font-black tracking-widest text-stone-500">❓ ¿QUÉ ES?</div>
+                  <div className="text-xs font-black tracking-widest text-stone-500">❓ ¿QUÉ ES?</div>
                   <p className="mt-0.5 text-xs leading-5">{c.explicacion}</p>
-                  <div className="mt-1.5 text-[10px] font-black tracking-widest text-stone-500">🎯 ¿POR QUÉ JUGARLA?</div>
+                  <div className="mt-1.5 text-xs font-black tracking-widest text-stone-500">🎯 ¿POR QUÉ JUGARLA?</div>
                   <ul className="mt-0.5 space-y-0.5 text-xs leading-5">
                     {pros.map(([k, v]) => (
                       <li key={k}>✅ Sube {META[k].label} {v}. Úsala cuando esté en rojo.</li>
@@ -206,7 +206,7 @@ export function Hand({
                     ))}
                     <li>⚡ Cuesta {c.pa} {c.pa === 1 ? "acción" : "acciones"}.</li>
                   </ul>
-                  <div className="mt-1.5 rounded-lg bg-stone-900/5 p-1.5 text-[11px] leading-4 text-stone-700">
+                  <div className="mt-1.5 rounded-lg bg-stone-900/5 p-1.5 text-xs leading-4 text-stone-700">
                     🛰️ <b>Dato NASA:</b> {c.fundamento}{" "}
                     <a
                       href={c.fuente.url}
@@ -228,7 +228,7 @@ export function Hand({
                 }}
                 onMouseEnter={() => onHover(c.impacto)}
                 onMouseLeave={() => onHover(null)}
-                className={`absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-full border-2 border-white px-2.5 py-1 text-[10px] font-black whitespace-nowrap text-white shadow-lg active:scale-90 ${girada ? "bg-zinc-700" : "bg-cyan-600"} ${resaltarAyuda && !girada ? "animate-pulse ring-2 ring-amber-300" : ""}`}
+                className={`absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-full border-2 border-white px-2.5 py-1 text-xs font-black whitespace-nowrap text-white shadow-lg active:scale-90 ${girada ? "bg-zinc-700" : "bg-cyan-600"} ${resaltarAyuda && !girada ? "animate-pulse ring-2 ring-amber-300" : ""}`}
               >
                 {girada ? "↩ VOLVER" : "❓ ¿QUÉ HACE?"}
               </button>

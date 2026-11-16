@@ -47,7 +47,7 @@ export default function WindowView({ scene, shakeKey }: { scene: Scene; shakeKey
             style={{
               borderRadius: pane === 1 ? "18px 18px 40px 40px" : pane === 0 ? "18px 8px 30px 18px" : "8px 18px 18px 30px",
               transform: pane === 0 ? "perspective(400px) rotateY(12deg)" : pane === 2 ? "perspective(400px) rotateY(-12deg)" : undefined,
-              minHeight: 190,
+              minHeight: 300,
             }}
           >
             <AnimatePresence mode="wait">
