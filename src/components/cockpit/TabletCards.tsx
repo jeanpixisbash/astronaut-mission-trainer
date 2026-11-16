@@ -115,6 +115,7 @@ export function Hand({
   pa,
   disabled,
   selectedKey,
+  resaltarAyuda,
   onPlay,
   onHover,
 }: {
@@ -123,6 +124,7 @@ export function Hand({
   pa: number;
   disabled: boolean;
   selectedKey: string | null;
+  resaltarAyuda?: boolean;
   onPlay: (c: CartaSupervivencia) => void;
   onHover: (impacto: Partial<Recursos> | null) => void;
 }) {
@@ -193,9 +195,9 @@ export function Hand({
                 </div>
                 <div className="absolute inset-0 overflow-y-auto rounded-2xl border-2 border-cyan-500 bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] [backface-visibility:hidden] [transform:rotateY(180deg)] sm:p-3">
                   <div className="text-[10px] font-black tracking-widest text-stone-500">❓ ¿QUÉ ES?</div>
-                  <p className="mt-0.5 text-[11px] leading-4">{c.explicacion}</p>
+                  <p className="mt-0.5 text-xs leading-5">{c.explicacion}</p>
                   <div className="mt-1.5 text-[10px] font-black tracking-widest text-stone-500">🎯 ¿POR QUÉ JUGARLA?</div>
-                  <ul className="mt-0.5 space-y-0.5 text-[11px] leading-4">
+                  <ul className="mt-0.5 space-y-0.5 text-xs leading-5">
                     {pros.map(([k, v]) => (
                       <li key={k}>✅ Sube {META[k].label} {v}. Úsala cuando esté en rojo.</li>
                     ))}
@@ -204,7 +206,7 @@ export function Hand({
                     ))}
                     <li>⚡ Cuesta {c.pa} {c.pa === 1 ? "acción" : "acciones"}.</li>
                   </ul>
-                  <div className="mt-1.5 rounded-lg bg-stone-900/5 p-1.5 text-[10px] leading-4 text-stone-700">
+                  <div className="mt-1.5 rounded-lg bg-stone-900/5 p-1.5 text-[11px] leading-4 text-stone-700">
                     🛰️ <b>Dato NASA:</b> {c.fundamento}{" "}
                     <a
                       href={c.fuente.url}
@@ -218,6 +220,7 @@ export function Hand({
                   </div>
                 </div>
               </motion.div>
+              {/* botón explícito estilo Snap: dice lo que hace, pulsa el día 1 */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -225,10 +228,9 @@ export function Hand({
                 }}
                 onMouseEnter={() => onHover(c.impacto)}
                 onMouseLeave={() => onHover(null)}
-                title={girada ? "Volver" : "Girar: ¿qué hace?"}
-                className="absolute -top-2 left-1/2 z-10 grid size-7 -translate-x-1/2 place-items-center rounded-full border-2 border-white bg-zinc-900 text-sm shadow-lg active:scale-90"
+                className={`absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-full border-2 border-white px-2.5 py-1 text-[10px] font-black whitespace-nowrap text-white shadow-lg active:scale-90 ${girada ? "bg-zinc-700" : "bg-cyan-600"} ${resaltarAyuda && !girada ? "animate-pulse ring-2 ring-amber-300" : ""}`}
               >
-                {girada ? "↩" : "🔄"}
+                {girada ? "↩ VOLVER" : "❓ ¿QUÉ HACE?"}
               </button>
             </motion.div>
           );

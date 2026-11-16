@@ -955,7 +955,7 @@ export default function PlayPage() {
               )}
 
               <div className="pt-2">
-                <Hand mano={mano} handIdx={handIdx} pa={state.pa} disabled={state.gameOver || fase === "negociar" || resol !== null} selectedKey={sel} onPlay={jugarCarta} onHover={setHoverImpact} />
+                <Hand mano={mano} handIdx={handIdx} pa={state.pa} disabled={state.gameOver || fase === "negociar" || resol !== null} selectedKey={sel} resaltarAyuda={state.dia === 1} onPlay={jugarCarta} onHover={setHoverImpact} />
               </div>
               {resol && (
                 <div className="pt-2">
@@ -975,7 +975,7 @@ export default function PlayPage() {
               )}
               <p className="px-1 pt-2 text-center text-[11px] leading-4 text-white/50">
                 {needConfirm ? "👆 Toca para ver · de nuevo para jugar · " : ""}
-                🔄 Gira las cartas para saber qué hacen · ⚡ ACCIONES ●●●: jugar gasta, vuelven cada día
+                ❓ ¿QUÉ HACE? te explica cada carta · ⚡ ACCIONES ●●●: jugar gasta, vuelven cada día
               </p>
               <AnimatePresence>
                 {selCarta && !resol && fase === "planificar" && !state.gameOver && refuerzoMax > 0 && (
