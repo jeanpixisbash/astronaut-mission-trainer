@@ -18,7 +18,7 @@ Ataca la queja "tiro cartas sin saber qué pasa": preview solo-hover, resolució
 
 ## P2 — Querer volver (HECHO ✅ commit 28144ae)
 
-## Diversión infantil (GUARDADO — propuesto 2026-11-16, implementar por orden)
+## Diversión infantil (HECHO ✅ commit 6e5e75a)
 Ideas de Minecraft/Pokémon/Outfoxed/Mario Kart/Fall Guys, todas interesantes según el jefe:
 - [ ] 🏠 Base visible: cada carta planta su edificio en tira bajo la ventana
 - [ ] 🎖️ Álbum de parches: 8 stickers coleccionables con persistencia
