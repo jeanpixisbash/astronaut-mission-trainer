@@ -62,7 +62,7 @@ export default function Home() {
                 href="/play"
                 className="rounded-full bg-white text-black px-6 py-3 font-semibold hover:bg-zinc-100 transition shadow-lg shadow-white/10"
               >
-                ▶ Start Mission — 7 Sols
+                ▶ Start Mission
               </Link>
               <a
                 href="#how"
@@ -94,7 +94,7 @@ export default function Home() {
           <div className="relative">
             <div className="rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-4 sm:p-5 shadow-2xl">
               <div className="flex items-center justify-between text-xs text-white/60">
-                <span className="rounded-full bg-white/10 px-2.5 py-1">◉ Outpost — Mars · Sol 3/7</span>
+                <span className="rounded-full bg-white/10 px-2.5 py-1">◉ Outpost — Mars · Day 3</span>
                 <span className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 px-2 py-1">
                   ● Crew OK
                 </span>
@@ -142,25 +142,25 @@ export default function Home() {
       <section id="how" className="mx-auto max-w-6xl px-5 py-10">
         <h2 className="text-xl font-semibold">How the training works</h2>
         <p className="text-sm text-white/60 mt-1 max-w-2xl">
-          Turn-based survival for 7 sols. No safe choice — every decision trades one resource for another, just like real
+          Turn-based survival across story missions. No safe choice — every card helps one system and hurts another, just like real
           mission planning.
         </p>
         <div className="mt-6 grid sm:grid-cols-3 gap-4">
           {[
             {
               n: "01",
-              t: "Allocate power",
-              d: "You get ~100W per sol. Split it between life support (O₂), shielding, greenhouse and science. Plain language, big sliders, instant feedback.",
+              t: "Play a card",
+              d: "You get 3 actions per day. Flip any card to learn what it does, then play it. Big sliders of consequence, plain language, instant feedback.",
             },
             {
               n: "02",
-              t: "Face an event",
-              d: "Real DONKI flares, dust storms, greenhouse alerts and comm delays. Choose: safe & costly or risky & cheap?",
+              t: "Face the red deck",
+              d: "Solar flares, dust storms, micrometeorites and comm blackouts strike after you play. Read the forecast and shield up — or hide.",
             },
             {
               n: "03",
               t: "Watch consequences",
-              d: "Choices compound. Low shielding → health drops. Low O₂ → crisis. Science points reward smart risk.",
+              d: "Every step resolves in front of you with real numbers. Keep all 4 bars away from 0% and 100% — both extremes kill.",
             },
           ].map((s) => (
             <div key={s.n} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -212,7 +212,7 @@ export default function Home() {
         <div className="rounded-[24px] bg-white text-black p-5 sm:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="font-bold text-lg">Ready to command the outpost?</div>
-            <div className="text-sm text-black/60">7 sols. 3 resources. No free choices. Ages 7–12 (fun for grown-ups too).</div>
+            <div className="text-sm text-black/60">4 missions. 4 systems. No free choices. Ages 7–12 (fun for grown-ups too).</div>
           </div>
           <Link href="/play" className="rounded-full bg-black text-white px-6 py-3 font-semibold hover:bg-zinc-800 transition">
             Launch Mission →

@@ -86,9 +86,6 @@ export const HOUSTON_CALMA = [
   "Sistemas estables. Houston sonríe. Haz tu rutina.",
 ];
 
-export const HOUSTON_WIN = "¡Misión cumplida, astronauta! Houston aplaude. 👏";
-export const HOUSTON_LOSE = "Houston… ¿me copias?… Misión perdida. Inténtalo de nuevo. 💔";
-
 export type Rutina = {
   id: string;
   nombre: string;

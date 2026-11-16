@@ -364,7 +364,7 @@ export default function PlayPage() {
     }
 
     const siguienteDia = check.dia + 1;
-    let siguiente: GameState = { ...check, dia: siguienteDia, pa: 3, protocoloActivo: false };
+    let siguiente: GameState = { ...check, dia: siguienteDia, pa: 3 };
     if (siguienteDia > 1 && siguienteDia <= check.maxDias) {
       siguiente = desgasteBase(siguiente);
       const vals = Object.entries(siguiente.recursos) as [keyof Recursos, number][];
@@ -393,6 +393,9 @@ export default function PlayPage() {
       playSequence(pasos, vistas, seq, () => {
         if (seqRef.current !== seq) return;
         setState(go);
+        // Las alertas también pueden caer en días sin negociación (1-2):
+        // revisarAlerta consume la entrada, así que el segundo llamado es no-op.
+        revisarAlerta(go.dia);
         if (eventoHoy?.id === "noche-lunar") darParche("noche");
         if (eventoHoy?.id === "fulguracion-x") darParche("cazatormentas");
         if (go.recursos.escudo >= 80) darParche("muralla");

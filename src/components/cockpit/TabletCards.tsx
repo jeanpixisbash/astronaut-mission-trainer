@@ -3,6 +3,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { CartaSupervivencia } from "@/lib/cardsCatalog";
 import type { Recursos } from "@/lib/gameEngine";
+import { sfx } from "@/lib/sound";
 
 export const META: Record<keyof Recursos, { icon: string; label: string }> = {
   energia: { icon: "⚡", label: "ENERGÍA" },
@@ -131,7 +132,7 @@ export function Hand({
   const [giradas, setGiradas] = useState<{ hand: number; map: Record<string, boolean> }>({ hand: handIdx, map: {} });
   const mapaGiradas = giradas.hand === handIdx ? giradas.map : {};
   const girar = (key: string) => {
-    sfxFlip();
+    sfx.flip();
     setGiradas({ hand: handIdx, map: { ...mapaGiradas, [key]: !mapaGiradas[key] } });
   };
   return (
@@ -238,29 +239,4 @@ export function Hand({
       </AnimatePresence>
     </div>
   );
-}
-
-function sfxFlip() {
-  try {
-    const w = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
-    const AC = window.AudioContext ?? w.webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "triangle";
-    o.frequency.setValueAtTime(600, ctx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.08);
-    g.gain.setValueAtTime(0.06, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.start();
-    o.stop(ctx.currentTime + 0.12);
-    setTimeout(() => {
-      void ctx.close().catch(() => undefined);
-    }, 300);
-  } catch {
-    /* sin audio */
-  }
 }

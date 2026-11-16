@@ -10,8 +10,6 @@ export type GameState = {
   maxDias: number;
   recursos: Recursos;
   pa: number;
-  maxPa: number;
-  protocoloActivo: boolean;
   ocultarHastaDia: number | null; // Interferencia de Telemetría
   log: string[];
   gameOver: boolean;
@@ -27,8 +25,6 @@ export function crearEstadoInicial(maxDias = 15): GameState {
     maxDias,
     recursos: { ...INICIAL },
     pa: 3,
-    maxPa: 3,
-    protocoloActivo: false,
     ocultarHastaDia: null,
     log: [`Día 1 — Colonia online. 4 barras en 50%. Sobrevive ${maxDias} días sin tocar 0% ni 100%.`],
     gameOver: false,

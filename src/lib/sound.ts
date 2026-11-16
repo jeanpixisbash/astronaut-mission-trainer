@@ -61,6 +61,23 @@ export const sfx = {
   click() {
     tone(520, 0.07, "triangle", 0.08);
   },
+  flip() {
+    if (muted) return;
+    const c = ac();
+    if (!c) return;
+    const t = c.currentTime;
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(600, t);
+    o.frequency.exponentialRampToValueAtTime(900, t + 0.08);
+    g.gain.setValueAtTime(0.06, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    o.connect(g);
+    g.connect(c.destination);
+    o.start(t);
+    o.stop(t + 0.12);
+  },
   pop() {
     tone(440, 0.1, "sine", 0.14);
     tone(660, 0.12, "sine", 0.12, 0.07);
