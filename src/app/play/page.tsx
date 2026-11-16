@@ -761,7 +761,7 @@ export default function PlayPage() {
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                     <div className="text-xs font-black tracking-widest text-white/60">👥 MODO JUNTOS (OPCIONAL)</div>
-                    <p className="mt-1 text-[11px] leading-4 text-white/55">Turnos por día, hot-seat. Ej: Effer, Luca</p>
+                    <p className="mt-1 text-[11px] leading-4 text-white/55">Turnos por día, hot-seat. Uno juega cada día.</p>
                     <input
                       defaultValue={jugadores.join(", ")}
                       onBlur={(e) => {
