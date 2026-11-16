@@ -159,7 +159,7 @@ export function Hand({
               <motion.div
                 animate={{ rotateY: girada ? 180 : 0 }}
                 transition={{ type: "spring", stiffness: 220, damping: 22 }}
-                className="relative [transform-style:preserve-3d]"
+                className="relative h-[170px] [transform-style:preserve-3d]"
               >
                 <div
                   onClick={() => {
@@ -167,7 +167,7 @@ export function Hand({
                   }}
                   onMouseEnter={() => onHover(c.impacto)}
                   onMouseLeave={() => onHover(null)}
-                  className={`flex min-h-[210px] flex-col rounded-2xl border-2 border-[#d8cfb4] bg-[#f7f1dd] p-2.5 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] [backface-visibility:hidden] sm:min-h-[230px] sm:p-3 ${selected ? "ring-4 ring-cyan-400" : ""} ${bloqueada ? "opacity-45" : "cursor-pointer"}`}
+                  className={`flex h-[170px] flex-col rounded-2xl border-2 border-[#d8cfb4] bg-[#f7f1dd] p-2 text-left text-stone-900 shadow-[0_10px_24px_rgba(0,0,0,0.45)] [backface-visibility:hidden] ${selected ? "ring-4 ring-cyan-400" : ""} ${bloqueada ? "opacity-45" : "cursor-pointer"}`}
                 >
                   <span className="absolute left-2 top-2 grid size-6 place-items-center rounded-full border border-stone-400 bg-white/70 text-xs" aria-hidden>
                     {fam.icon}
@@ -175,7 +175,7 @@ export function Hand({
                   <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-black text-white ${noPA ? "bg-red-500" : "bg-zinc-900"}`}>
                     {c.pa} PA
                   </span>
-                  <span className="mx-auto mt-5 grid size-12 place-items-center rounded-full border-2 border-stone-400 bg-white text-2xl" aria-hidden>
+                  <span className="mx-auto mt-1 grid size-10 place-items-center rounded-full border-2 border-stone-400 bg-white text-xl" aria-hidden>
                     {c.familia === "energia" ? "⚡" : c.familia === "soporte" ? "💧" : c.familia === "biodomo" ? "🌱" : "🛡️"}
                   </span>
                   <span className="mt-2 text-center text-[13px] font-black leading-tight sm:text-sm">{c.nombre}</span>

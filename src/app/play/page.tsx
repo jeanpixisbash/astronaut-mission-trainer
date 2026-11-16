@@ -701,9 +701,9 @@ export default function PlayPage() {
   const oculto = debeOcultar(state);
 
   return (
-    <div className="min-h-dvh bg-[#05070f] text-zinc-100">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#05070f]/85 backdrop-blur">
-        <div className="mx-auto flex h-13 max-w-6xl items-center justify-between gap-2 px-4 py-2">
+    <div className="h-dvh flex flex-col overflow-hidden bg-[#05070f] text-zinc-100">
+      <header className="shrink-0 border-b border-white/10 bg-[#05070f]/85 backdrop-blur">
+        <div className="mx-auto flex h-11 max-w-[1400px] items-center justify-between gap-2 px-3 py-1.5">
           <Link href="/" className="flex items-center gap-2 font-black tracking-tight">
             <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-400">◉</span>
             <span className="hidden sm:inline">Sobrevive al Sol</span>
@@ -727,7 +727,7 @@ export default function PlayPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-3 pb-8 sm:px-4 [font-size:15px]">
+      <main className="mx-auto flex w-full max-w-[1400px] flex-1 min-h-0 flex-col px-3 pb-2 [font-size:15px] overflow-hidden">
         {/* selector de misión */}
         <AnimatePresence>
           {mision === null && (
@@ -978,8 +978,8 @@ export default function PlayPage() {
           )}
         </AnimatePresence>
 
-        {/* cockpit — layout consola: ventana grande + paneles laterales */}
-        <div className="mt-3 flex items-stretch justify-center gap-2">
+        {/* cockpit — consola horizontal: todo visible en una sola pantalla */}
+        <div className="mt-2 flex flex-1 min-h-0 items-stretch justify-center gap-2 overflow-hidden">
           <SideConsole side="left" />
           <PanelLateral
             panel="timeline"
@@ -1003,8 +1003,10 @@ export default function PlayPage() {
               {eventoHoy && <div className="rounded-xl bg-amber-400 px-3 py-2 text-sm font-bold text-black">🌌 Hoy: {eventoHoy.nombre} — {eventoHoy.datoReal}</div>}
             </div>
           </PanelLateral>
-          <div className="min-w-0 flex-1">
-            <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
+          <div className="flex min-w-0 flex-1 flex-col min-h-0">
+            <div className="flex-1 shrink-0" style={{ height: "24dvh", minHeight: 150, maxHeight: 220 }}>
+              <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
+            </div>
 
             {/* base visible: cada carta planta su edificio */}
             {base.length > 0 && (
@@ -1018,10 +1020,10 @@ export default function PlayPage() {
               </div>
             )}
 
-            {/* feed Houston con astronauta */}
+            {/* feed Houston con astronauta — compacto */}
             {mision && (
-              <div className="flex items-center gap-2 border-x-[10px] border-[#343b4a] bg-[#10141f] px-3 py-1.5">
-                <Astronauta mood={mood} size={44} color={tribu.color} />
+              <div className="flex items-center gap-2 border-x-[10px] border-[#343b4a] bg-[#10141f] px-3 py-1">
+                <Astronauta mood={mood} size={34} color={tribu.color} />
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={houstonMsg}
@@ -1029,7 +1031,7 @@ export default function PlayPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25 }}
-                    className="flex-1 text-xs font-bold leading-4 text-cyan-200"
+                    className="flex-1 truncate text-sm font-bold leading-4 text-cyan-200"
                   >
                     {houstonMsg}
                   </motion.div>
@@ -1070,8 +1072,8 @@ export default function PlayPage() {
               )}
             </AnimatePresence>
 
-            {/* tablet */}
-            <div className="rounded-b-[26px] border-[10px] border-t-0 border-[#343b4a] bg-[#0d1119] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.6)] sm:p-3">
+            {/* tablet — dock horizontal */}
+            <div className="flex flex-1 min-h-0 flex-col rounded-b-[22px] border-[10px] border-t-0 border-[#343b4a] bg-[#0d1119] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.6)]">
               <div className="flex items-center justify-between gap-2 px-1 pb-2">
                 <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${state.gameOver ? (state.won ? "bg-emerald-500 border-emerald-600 text-white" : "bg-red-500 border-red-600 text-white") : "border-white/15 bg-white/5 text-white/80"}`}>
                   {state.gameOver ? (state.won ? "✅ ESTABLE" : `💥 ${state.causaDerrota}`) : resol ? `⏳ ${resol.i >= resol.pasos.length ? "…" : `${resol.pasos[Math.min(resol.i, resol.pasos.length - 1)].emoji} ${resol.pasos[Math.min(resol.i, resol.pasos.length - 1)].titulo}`} (${Math.min(resol.i + 1, resol.pasos.length)}/${resol.pasos.length})` : `● ${fase === "negociar" ? `NEGOCIANDO ${segundos}s` : "ELIGE 1 CARTA"}`}
@@ -1098,14 +1100,13 @@ export default function PlayPage() {
                   {protocoloBloqueado ? "🔒 ¡A CUBIERTO! (DÍA 3)" : protocolo ? "🛡️ ¡A CUBIERTO! ON" : "🛡️ ¡A CUBIERTO! (½ daño)"}
                 </button>
               </div>
-              {mision && !state.gameOver && (
+              <div className="hidden">{mision && !state.gameOver && (
                 <div className="px-1 pb-1 text-xs font-bold text-white/55">🎯 {mision.nombre}: {mision.objetivo}</div>
-              )}
-
-              <Crew recursos={vistaActual} nombres={tribu.crew} />
+              )}</div>
+              <div className="hidden lg:block"><Crew recursos={vistaActual} nombres={tribu.crew} /></div>
 
               {mision?.id === "m0" && !state.gameOver && (
-                <div className="mt-1.5 rounded-xl border border-white/15 bg-white/[0.05] px-3 py-2">
+                <div className="hidden mt-1 rounded-lg border border-white/15 bg-white/[0.05] px-2 py-1 lg:block">
                   <div className="text-xs font-black tracking-widest text-white/50">🎓 LISTA DE ENTRENAMIENTO</div>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold">
                     <span className={state.dia > 1 ? "text-emerald-300" : "text-white/60"}>{state.dia > 1 ? "✅" : "⭕"} Juega una carta</span>
