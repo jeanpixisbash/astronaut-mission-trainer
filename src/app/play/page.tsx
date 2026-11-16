@@ -367,7 +367,14 @@ export default function PlayPage() {
 
     const ataque = deckRojo[rojoIdx % deckRojo.length];
     const ataqueT = TC(ataque);
-    if (ataque.id === "interferencia") {
+    const tutorialDay1 = mision?.id === "m0" && state.dia === 1;
+    if (tutorialDay1) {
+      const tranquilo = lang === "en"
+        ? "Training day: no attack yet. Watch what your card changes."
+        : "Día de entrenamiento: todavía no hay ataque. Mira qué cambia con tu carta.";
+      pasos.push({ emoji: "🌤️", titulo: lang === "en" ? "Quiet systems" : "Sistemas tranquilos", detalle: tranquilo, houston: tranquilo, deltas: {} });
+      vistas.push({ ...next.recursos });
+    } else if (ataque.id === "interferencia") {
       next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, fmt(t("ia_oculta"), { n: ataqueT.nombre })] };
       pasos.push({ emoji: "👁️", titulo: ataqueT.nombre, detalle: ataqueT.explicacion, houston: rAtq(ataque.id), deltas: {} });
       vistas.push({ ...next.recursos });
@@ -433,7 +440,8 @@ export default function PlayPage() {
 
     const siguienteDia = check.dia + 1;
     let siguiente: GameState = { ...check, dia: siguienteDia, pa: 3 };
-    if (siguienteDia > 1 && siguienteDia <= check.maxDias) {
+    const tutorialNocturnalWear = mision?.id === "m0" && state.dia === 1;
+    if (siguienteDia > 1 && siguienteDia <= check.maxDias && !tutorialNocturnalWear) {
       siguiente = desgasteBase(siguiente, lang);
       const vals = Object.entries(siguiente.recursos) as [keyof Recursos, number][];
       const peor = [...vals].sort((a, b) => a[1] - b[1])[0];
@@ -454,6 +462,12 @@ export default function PlayPage() {
         return;
       }
       siguiente = check2;
+    } else if (tutorialNocturnalWear) {
+      const tranquilo = lang === "en"
+        ? "Training day: night wear is paused so you can learn the next step."
+        : "Día de entrenamiento: pausamos el desgaste para que aprendas el siguiente paso.";
+      pasos.push({ emoji: "🌤️", titulo: lang === "en" ? "No night wear yet" : "Todavía sin desgaste", detalle: tranquilo, houston: tranquilo, deltas: {} });
+      vistas.push({ ...siguiente.recursos });
     }
 
     if (siguienteDia > check.maxDias) {
@@ -1216,13 +1230,29 @@ export default function PlayPage() {
                 )}
               </AnimatePresence>
 
-              {!tutOff && !state.gameOver && !resol && fase === "planificar" && state.dia <= 2 && mision && (
+              {!tutOff && !state.gameOver && !resol && fase === "planificar" && state.dia <= 3 && mision && (
                 <div className="mt-2 rounded-2xl border-2 border-cyan-400 bg-cyan-50 p-3 text-zinc-900">
                   <div className="text-sm font-black">
-                    {state.dia === 1 ? `👉 ${misionL(mision).emoji} ${misionL(mision).nombre}: ${misionL(mision).objetivo}` : t("coach_d2t")}
+                    {mision.id === "m0"
+                      ? state.dia === 1
+                        ? `👉 ${t("coach_m0_day1_title")}`
+                        : state.dia === 2
+                          ? `👉 ${t("coach_m0_day2_title")}`
+                          : `👉 ${t("coach_m0_day3_title")}`
+                      : state.dia === 1
+                        ? `👉 ${misionL(mision).emoji} ${misionL(mision).nombre}: ${misionL(mision).objetivo}`
+                        : t("coach_d2t")}
                   </div>
                   <div className="mt-1 text-xs">
-                    {state.dia === 1 ? t("coach_d1d") : t("coach_d2d")}
+                    {mision.id === "m0"
+                      ? state.dia === 1
+                        ? t("coach_m0_day1")
+                        : state.dia === 2
+                          ? t("coach_m0_day2")
+                          : t("coach_m0_day3")
+                      : state.dia === 1
+                        ? t("coach_d1d")
+                        : t("coach_d2d")}
                   </div>
                   <button
                     onClick={() => {

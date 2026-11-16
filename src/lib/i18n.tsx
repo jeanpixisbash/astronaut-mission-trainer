@@ -59,6 +59,21 @@ const UI = {
     es: "Cada carta roja te pega después de jugar. ¡A cubierto! y la negociación llegan el día 3.",
     en: "Each red card hits after you play. Cover and negotiation unlock on day 3.",
   },
+  coach_m0_day1_title: { es: "PASO 1 · TU DECISIÓN", en: "STEP 1 · YOUR DECISION" },
+  coach_m0_day1: {
+    es: "Hoy solo aprenderás las cartas. No hay ataque ni desgaste: toca una carta y mira qué cambia.",
+    en: "Today you only learn cards. No attack or night wear: tap a card and watch what changes.",
+  },
+  coach_m0_day2_title: { es: "PASO 2 · UNA AMENAZA", en: "STEP 2 · ONE THREAT" },
+  coach_m0_day2: {
+    es: "Ahora aparecerá un ataque rojo después de tu carta. No lo causaste tú: es un problema externo.",
+    en: "A red attack now appears after your card. You didn't cause it: it's an outside problem.",
+  },
+  coach_m0_day3_title: { es: "PASO 3 · EL ESPACIO RESPONDE", en: "STEP 3 · SPACE RESPONDS" },
+  coach_m0_day3: {
+    es: "Hoy llega un evento global. Después de esto ya conoces el ciclo completo de una misión.",
+    en: "A global event arrives today. After this, you know the complete mission cycle.",
+  },
   entendido: { es: "Entendido", en: "Got it" },
   se_acerca: { es: "🔭 SE ACERCA:", en: "🔭 INCOMING:" },
   oculta_pct: { es: "ocultará tus % 1 turno", en: "will hide your % for 1 turn" },
