@@ -610,6 +610,40 @@ export default function PlayPage() {
     if (!m) sfx.click();
   };
 
+  // Música ambient: loop suave atada al mute (CC BY 4.0 Kevin MacLeod).
+  // Vive en un ref: una sola instancia, nace al primer gesto (autoplay policy).
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mutedRef = useRef(muted);
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
+  useEffect(() => {
+    const audio = new Audio("/audio/ambient-espacio.mp3");
+    audio.loop = true;
+    audio.volume = 0.28;
+    audioRef.current = audio;
+    const unlock = () => {
+      if (!mutedRef.current) audio.play().catch(() => undefined);
+      else audio.pause();
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      audio.pause();
+      audio.src = "";
+      audioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (muted) audio.pause();
+    else audio.play().catch(() => undefined);
+  }, [muted]);
+
   const protocoloBloqueado = state.dia < 3;
   const puedeGuardarProtocolo = state.pa >= 1 && !state.gameOver && !protocoloBloqueado;
   const proximoAtaque = useMemo(() => deckRojo[rojoIdx % deckRojo.length], [deckRojo, rojoIdx]);

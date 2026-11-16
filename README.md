@@ -55,6 +55,9 @@ Next.js 16 (App Router) + TypeScript + Tailwind 4 + Turbopack. No DB/auth — in
 
 Not affiliated with NASA. Uses public open data per challenge resources. Challenge owns the brief — this is a participant-built trainer.
 
+Music: "Mesmerizing Galaxy Loop" by Kevin MacLeod (incompetech.com) — CC BY 4.0,
+file `public/audio/ambient-espacio.mp3` (loop ambient 🔊 at 0.28, honours the mute toggle).
+
 ## License
 
 MIT — do what you want, credit the crew.
