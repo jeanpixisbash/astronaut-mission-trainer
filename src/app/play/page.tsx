@@ -27,7 +27,6 @@ import {
   ALERTAS,
   BRIEFINGS,
   BRIEFING_DEFAULT,
-  EDIFICIO,
   FRACASO_GRACIOSO,
   HOUSTON_CALMA,
   PARCHES,
@@ -133,9 +132,6 @@ function RailDerecho({ paneles, activo, onToggle }: { paneles: { id: PanelId; ti
               on ? "border-white bg-white text-black shadow-lg" : "border-white/15 bg-white/[0.05] text-white/70 hover:bg-white/10"
             }`}
           >
-            <span className="text-lg leading-none" aria-hidden>
-              {p.icono}
-            </span>
             <span className="text-[10px] font-black tracking-widest [writing-mode:vertical-rl]">{p.titulo}</span>
           </button>
         );
@@ -1090,11 +1086,9 @@ export default function PlayPage() {
             {/* base visible: cada carta planta su edificio */}
             {base.length > 0 && (
               <div className="flex items-center gap-1 overflow-x-auto border-x-[10px] border-[#343b4a] bg-[#0b0e17] px-3 py-1.5">
-                <span className="shrink-0 text-xs font-black tracking-widest text-white/50">🏠 MI BASE</span>
+                <span className="shrink-0 text-xs font-black tracking-widest text-white/50">MI BASE</span>
                 {base.slice(-18).map((id, i) => (
-                  <span key={`${id}-${i}`} className="shrink-0 text-xl" title={id}>
-                    {EDIFICIO[id] ?? "🏕️"}
-                  </span>
+                  <span key={`${id}-${i}`} className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400/60" title={id} />
                 ))}
               </div>
             )}
@@ -1395,7 +1389,7 @@ export default function PlayPage() {
 
               {ultimoAtaque && (
                 <div className="mt-2 rounded-2xl border border-red-400/50 bg-red-500/15 p-2.5 text-xs">
-                  <span className="font-black text-red-300">🔴 {lang === "en" ? "WEATHER / AI" : "CLIMA / IA"}: {cardText(lang, ultimoAtaque).nombre}</span>
+                  <span className="font-black text-red-300">{lang === "en" ? "WEATHER / AI" : "CLIMA / IA"}: {cardText(lang, ultimoAtaque).nombre}</span>
                   <span className="ml-2 text-white/70">
                     {Object.entries(ultimoAtaque.efectoRival).length === 0
                       ? t("oculta_pct")
@@ -1471,7 +1465,7 @@ export default function PlayPage() {
               >
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs font-black tracking-widest text-white/60">
-                    {paneles.find((p) => p.id === panelAbierto)?.icono} {paneles.find((p) => p.id === panelAbierto)?.titulo}
+                    {paneles.find((p) => p.id === panelAbierto)?.titulo}
                   </span>
                   <button onClick={() => setPanelAbierto(null)} className="rounded-full border border-white/15 px-2 py-0.5 text-xs font-black text-white/70" aria-label="Cerrar panel">
                     ✕
@@ -1496,7 +1490,7 @@ export default function PlayPage() {
                 )}
                 {panelAbierto === "bitacora" && (
                   <div>
-                    <div className="max-h-[340px] overflow-auto rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-sm leading-6">
+                    <div className="max-h-[340px] overflow-auto rounded-xl border border-white/10 bg-black/30 p-2 text-sm leading-6">
                       {state.log.map((l, i) => (
                         <div key={i} className={i === state.log.length - 1 ? "font-bold text-white" : "text-white/60"}>{l}</div>
                       ))}
@@ -1513,12 +1507,12 @@ export default function PlayPage() {
                     {mision ? (
                       <div>
                         <div className="text-sm font-black">
-                          {misionL(mision).emoji} {misionL(mision).nombre}
+                          {misionL(mision).nombre}
                         </div>
                         <p className="mt-1 text-xs leading-4 text-white/70">{misionL(mision).objetivo}</p>
                         <p className="mt-1 text-xs leading-4 text-white/55">{misionL(mision).descripcion}</p>
                         <div className="mt-2 border-t border-white/10 pt-2 text-xs text-white/60">
-                          {t("dia")} {state.dia}/{state.maxDias} · PA {state.pa}/3 · ⚖️ {equi}%
+                          {t("dia")} {state.dia}/{state.maxDias} · PA {state.pa}/3 · {equi}%
                         </div>
                         {turnoDe && <div className="mt-1 text-xs font-black text-cyan-200">{t("guion")} {turnoDe}</div>}
                       </div>

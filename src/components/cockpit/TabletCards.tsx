@@ -206,10 +206,10 @@ export function Hand({
                   <div className="mt-1.5 text-xs font-black tracking-widest text-stone-500">{t("porque")}</div>
                   <ul className="mt-0.5 space-y-0.5 text-xs leading-5">
                     {pros.map(([k, v]) => (
-                      <li key={k}>✅ {fmt(t("usala"), { r: RES_LABEL[lang][k], v })}</li>
+                      <li key={k}>{fmt(t("usala"), { r: RES_LABEL[lang][k], v })}</li>
                     ))}
                     {contras.map(([k, v]) => (
-                      <li key={k}>⚠️ {fmt(t("ojo"), { r: RES_LABEL[lang][k], v })}</li>
+                      <li key={k}>{fmt(t("ojo"), { r: RES_LABEL[lang][k], v })}</li>
                     ))}
                     <li>⚡ {c.pa === 1 ? fmt(t("cuesta1"), { n: c.pa }) : fmt(t("cuestaN"), { n: c.pa })}</li>
                   </ul>
