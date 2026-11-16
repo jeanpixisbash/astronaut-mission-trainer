@@ -13,6 +13,10 @@ export type Mision = {
   guion?: string[];
   /** ataques guionados de la IA (ids en orden). Rival fácil tipo Clash Royale. */
   ataques?: string[];
+  /** Número de alertas sorpresa de esta misión. */
+  alertas?: number;
+  /** Día desde el que empiezan los ataques rojos. */
+  ataqueDesdeDia?: number;
 };
 
 export const MISIONES: Mision[] = [
@@ -26,6 +30,8 @@ export const MISIONES: Mision[] = [
     forzados: { 3: "viento-calmo" },
     guion: ["paneles-gigantes", "raciones", "sabatier", "sellado", "espirulina", "hidroponico"],
     ataques: ["sabotaje-termico", "fuga-criogenica", "interferencia"],
+    alertas: 0,
+    ataqueDesdeDia: 2,
   },
   {
     id: "m1",
@@ -35,6 +41,12 @@ export const MISIONES: Mision[] = [
     descripcion: "Tu primera colonia. Pocas cartas, noches largas.",
     objetivo: "Sobrevive 6 días. Día 3: noche lunar — guarda energía.",
     forzados: { 3: "noche-lunar", 6: "viento-calmo" },
+    // Primer día sin ataque; después solo amenazas previsibles y negativas.
+    // Día 1: Paneles. Día 2: Raciones. Día 3: FSP para sobrevivir la noche lunar.
+    guion: ["paneles-gigantes", "raciones", "sabatier", "sellado", "fsp", "raciones", "muro-regolito", "reciclador-orina"],
+    ataques: ["sabotaje-termico", "sabotaje-termico", "fuga-criogenica", "interferencia", "fuga-criogenica", "interferencia"],
+    alertas: 1,
+    ataqueDesdeDia: 2,
   },
   {
     id: "m2",
@@ -44,6 +56,9 @@ export const MISIONES: Mision[] = [
     descripcion: "Marte se pone bravo. Sol, polvo y radiación seguidos.",
     objetivo: "Sobrevive 9 días. Días 3, 6 y 9 pegan fuerte.",
     forzados: { 3: "fulguracion-x", 6: "tormenta-global-marte", 9: "pico-radiacion" },
+    ataques: ["sabotaje-termico", "fuga-criogenica", "tormenta-polvo", "interferencia", "micrometeoritos", "fuga-criogenica", "polvo-lunar", "sabotaje-termico", "interferencia"],
+    alertas: 2,
+    ataqueDesdeDia: 2,
   },
   {
     id: "m3",
@@ -53,6 +68,8 @@ export const MISIONES: Mision[] = [
     descripcion: "La misión real: 15 días, eventos sorpresa.",
     objetivo: "Sobrevive 15 días manteniendo el equilibrio cerca de 50%.",
     forzados: {},
+    alertas: 2,
+    ataqueDesdeDia: 1,
   },
 ];
 

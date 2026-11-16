@@ -244,13 +244,13 @@ export default function PlayPage() {
   };
 
   /** 2 sorpresas por partida (misiones de 6+ días): días al azar, fuera de eventos globales. */
-  const programarAlertas = (maxDias: number): Record<number, string> => {
-    if (maxDias < 6) return {};
+  const programarAlertas = (maxDias: number, cantidad = 2): Record<number, string> => {
+    if (maxDias < 6 || cantidad <= 0) return {};
     const elegibles: number[] = [];
     for (let d = 2; d <= maxDias - 1; d++) {
       if (d % 3 !== 0) elegibles.push(d);
     }
-    const dias = shuffle(elegibles).slice(0, 2);
+    const dias = shuffle(elegibles).slice(0, cantidad);
     const orden = shuffle([...ALERTAS]);
     const prog: Record<number, string> = {};
     dias.forEach((d, i) => {
@@ -365,18 +365,18 @@ export default function PlayPage() {
     pasos.push({ emoji: FAMILIA_ICON[carta.familia] ?? "◉", titulo: etiqueta, detalle: TC(carta).explicacion, deltas: { ...impacto } });
     vistas.push({ ...next.recursos });
 
-    const ataque = deckRojo[rojoIdx % deckRojo.length];
-    const ataqueT = TC(ataque);
-    const tutorialDay1 = mision?.id === "m0" && state.dia === 1;
-    if (tutorialDay1) {
+    const ataqueActivo = state.dia >= (mision?.ataqueDesdeDia ?? 1);
+    const ataque = ataqueActivo ? deckRojo[rojoIdx % deckRojo.length] : null;
+    const ataqueT = ataque ? TC(ataque) : null;
+    if (!ataque) {
       const tranquilo = lang === "en"
         ? "Training day: no attack yet. Watch what your card changes."
         : "Día de entrenamiento: todavía no hay ataque. Mira qué cambia con tu carta.";
       pasos.push({ emoji: "🌤️", titulo: lang === "en" ? "Quiet systems" : "Sistemas tranquilos", detalle: tranquilo, houston: tranquilo, deltas: {} });
       vistas.push({ ...next.recursos });
     } else if (ataque.id === "interferencia") {
-      next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, fmt(t("ia_oculta"), { n: ataqueT.nombre })] };
-      pasos.push({ emoji: "👁️", titulo: ataqueT.nombre, detalle: ataqueT.explicacion, houston: rAtq(ataque.id), deltas: {} });
+      next = { ...next, ocultarHastaDia: next.dia + 1, log: [...next.log, fmt(t("ia_oculta"), { n: ataqueT!.nombre })] };
+      pasos.push({ emoji: "👁️", titulo: ataqueT!.nombre, detalle: ataqueT!.explicacion, houston: rAtq(ataque.id), deltas: {} });
       vistas.push({ ...next.recursos });
     } else {
       const efecto: Partial<Recursos> = { ...ataque.efectoRival };
@@ -388,9 +388,9 @@ export default function PlayPage() {
         for (const k of Object.keys(efecto) as (keyof Recursos)[]) {
           next.recursos[k] = clamp(next.recursos[k] + (efecto[k] ?? 0));
         }
-        next.log = [...next.log, fmt(t("ia_ataque"), { n: ataqueT.nombre, e: JSON.stringify(efecto), p: protocolo ? t("ia_prot") : "" })];
+        next.log = [...next.log, fmt(t("ia_ataque"), { n: ataqueT!.nombre, e: JSON.stringify(efecto), p: protocolo ? t("ia_prot") : "" })];
       }
-      pasos.push({ emoji: "🔴", titulo: ataqueT.nombre, detalle: ataqueT.explicacion, houston: rAtq(ataque.id) ?? "¡Oh no! ¡Algo golpea la colonia!", deltas: efecto });
+      pasos.push({ emoji: "🔴", titulo: ataqueT!.nombre, detalle: ataqueT!.explicacion, houston: rAtq(ataque.id) ?? "¡Oh no! ¡Algo golpea la colonia!", deltas: efecto });
       vistas.push({ ...next.recursos });
     }
 
@@ -513,7 +513,7 @@ export default function PlayPage() {
     }
   };
 
-  const playSequence = (pasos: PasoRes[], vistas: Recursos[], seq: number, done: () => void, ataque: CartaAtaque, resultado: "sigue" | "gana" | "pierde") => {
+  const playSequence = (pasos: PasoRes[], vistas: Recursos[], seq: number, done: () => void, ataque: CartaAtaque | null, resultado: "sigue" | "gana" | "pierde") => {
     setUltimoAtaque(ataque);
     setRecap(pasos);
     setSel(null);
@@ -640,7 +640,7 @@ export default function PlayPage() {
     setDeckSup(m.guion ? buildDeckFijo(m.guion) : shuffle(buildDeckSupervivencia()));
     setDeckRojo(m.ataques ? buildAtaquesFijos(m.ataques) : shuffle(buildDeckAtaque()));
     setTimeline(buildTimelineFor(m, shuffle(buildDeckEventos())));
-    alertasRef.current = programarAlertas(m.dias);
+    alertasRef.current = programarAlertas(m.dias, m.alertas ?? 2);
     setAlertaActiva(null);
     setHandIdx(0);
     setRojoIdx(0);
@@ -676,7 +676,7 @@ export default function PlayPage() {
     setDeckSup(mision?.guion ? buildDeckFijo(mision.guion) : shuffle(buildDeckSupervivencia()));
     setDeckRojo(mision?.ataques ? buildAtaquesFijos(mision.ataques) : shuffle(buildDeckAtaque()));
     setTimeline(mision ? buildTimelineFor(mision, shuffle(buildDeckEventos())) : shuffle(buildDeckEventos()).slice(0, 5));
-    alertasRef.current = programarAlertas(dias);
+    alertasRef.current = programarAlertas(dias, mision?.alertas ?? 2);
     setAlertaActiva(null);
     setHandIdx(0);
     setRojoIdx(0);
