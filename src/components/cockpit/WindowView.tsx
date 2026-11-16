@@ -2,6 +2,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Particles from "./Particles";
 import type { Scene } from "./scene";
+import type { Lang } from "@/lib/i18n";
 
 function Craters() {
   return (
@@ -15,7 +16,7 @@ function Craters() {
   );
 }
 
-export default function WindowView({ scene, shakeKey }: { scene: Scene; shakeKey: string }) {
+export default function WindowView({ scene, shakeKey, lang = "es" }: { scene: Scene; shakeKey: string; lang?: Lang }) {
   return (
     <div className="relative overflow-hidden rounded-t-[22px] border-x-[10px] border-t-[10px] border-[#343b4a] bg-black">
       {/* marco superior cabina */}
@@ -25,7 +26,7 @@ export default function WindowView({ scene, shakeKey }: { scene: Scene; shakeKey
             <span key={i} className={`size-2 rounded-full ${i === 0 ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : i === 1 ? "bg-amber-400 shadow-[0_0_6px_#fbbf24]" : "bg-red-400 shadow-[0_0_6px_#f87171]"}`} />
           ))}
         </div>
-        <div className="text-[10px] font-black tracking-[0.2em] text-white/60">VENTANA PRINCIPAL — DÍA {scene.id.replace(/\D/g, "") || "·"}</div>
+        <div className="text-[10px] font-black tracking-[0.2em] text-white/60">{lang === "en" ? "MAIN VIEW" : "VENTANA PRINCIPAL"} — {lang === "en" ? "DAY" : "DÍA"} {scene.id.replace(/\D/g, "") || "·"}</div>
         <div className="flex gap-1.5" aria-hidden>
           {[0, 1, 2].map((i) => (
             <span key={i} className="size-2 rounded-full bg-white/20" />

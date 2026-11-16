@@ -1084,7 +1084,7 @@ export default function PlayPage() {
           <SideConsole side="left" />
           <div className="flex min-w-0 flex-1 flex-col min-h-0">
             <div className="flex-1 shrink-0" style={{ height: "24dvh", minHeight: 150, maxHeight: 220 }}>
-              <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} />
+              <WindowView scene={scene} shakeKey={`${state.dia}-${ultimoAtaque?.id ?? "none"}`} lang={lang} />
             </div>
 
             {/* base visible: cada carta planta su edificio */}
